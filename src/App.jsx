@@ -11,6 +11,8 @@ import Footer from './components/Footer';
 import CountryModal from './components/CountryModal';
 import BookingForm from './components/BookingForm';
 import MyBookings from './components/MyBookings';
+import Inscription from './components/Inscription/inscription';
+import Connexion from './components/Connexion/connexion';
 
 const App = () => {
   const [searchForm, setSearchForm] = useState({
@@ -129,6 +131,24 @@ const App = () => {
             path="/mes-reservations"
             element={
               <MyBookings bookings={bookings} onCancel={handleCancelBooking} />
+            }
+          />
+          {/* routes pour l'inscription et la connexion */}
+         
+          <Route
+            path="/inscription"
+            element={
+              <div className="mb-6">
+                <Inscription />
+              </div>
+            }
+          />
+          <Route
+            path="/connexion"
+            element={
+              <div className="mb-6">
+                <Connexion />
+              </div>
             }
           />
         </Routes>
