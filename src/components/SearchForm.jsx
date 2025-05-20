@@ -14,13 +14,34 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
   };
 
   const handleBookFlight = (flight) => {
-    // Navigate to booking form with pre-filled flight data
-    navigate('/reserver', {
-      state: {
-        departure: flight.departure,
-        arrival: flight.arrival,
-      },
-    });
+    let departureDateTime = new Date().toISOString();
+    try {
+      const dateValue = flight.departureDateTime || flight.date;
+      if (dateValue) {
+        const parsedDate = new Date(dateValue);
+        if (!isNaN(parsedDate.getTime())) {
+          departureDateTime = parsedDate.toISOString();
+        } else {
+          console.error('Invalid date:', dateValue);
+        }
+      }
+    } catch (err) {
+      console.error('Error formatting date:', err);
+    }
+
+    const flightData = {
+      departure: flight.departure || 'Non spécifié',
+      arrival: flight.arrival || 'Non spécifié',
+      price: flight.price || 0,
+      airline: flight.airline || 'Air Senegal',
+      flightNumber: flight.flightNumber || 'SN000',
+      departureDateTime,
+    };
+
+    console.log('Booking flight:', flightData);
+    localStorage.setItem('selectedFlightId', flight.id || flight._id || 'unknown');
+    localStorage.setItem('selectedFlight', JSON.stringify(flightData));
+    navigate('/reserver', { state: flightData });
   };
 
   return (
@@ -31,10 +52,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
           <form onSubmit={handleSubmit(submitHandler)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               <div>
-                <label
-                  htmlFor="departure"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
+                <label htmlFor="departure" className="block text-sm font-medium text-gray-700 mb-1">
                   Ville de départ
                 </label>
                 <div className="relative">
@@ -43,7 +61,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                     type="text"
                     id="departure"
                     {...register('departure', { required: 'La ville de départ est requise' })}
-                    placeholder="Paris, France"
+                    placeholder="Dakar, Sénégal"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                   {errors.departure && (
@@ -52,10 +70,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="arrival"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
+                <label htmlFor="arrival" className="block text-sm font-medium text-gray-700 mb-1">
                   Ville d'arrivée
                 </label>
                 <div className="relative">
@@ -63,8 +78,8 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                   <input
                     type="text"
                     id="arrival"
-                    {...register('arrival', { required: 'La ville d’arrivée est requise' })}
-                    placeholder="New York, États-Unis"
+                    {...register('arrival', { required: "La ville d'arrivée est requise" })}
+                    placeholder="Paris, France"
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   />
                   {errors.arrival && (
@@ -73,10 +88,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="date"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
+                <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
                   Date de départ
                 </label>
                 <div className="relative">
@@ -94,10 +106,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="passengers"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
+                <label htmlFor="passengers" className="block text-sm font-medium text-gray-700 mb-1">
                   Nombre de passagers
                 </label>
                 <div className="relative">
@@ -131,8 +140,6 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
               </button>
             </div>
           </form>
-
-          {/* Flight Results Section */}
           <div className="mt-8">
             <h3 className="text-xl font-bold text-gray-800 mb-4">Résultats de la recherche</h3>
             {flights.length === 0 ? (
@@ -141,7 +148,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
               <div className="grid grid-cols-1 gap-6">
                 {flights.map((flight) => (
                   <div
-                    key={flight.id}
+                    key={flight.id || flight._id}
                     className="bg-gray-50 rounded-xl p-6 flex justify-between items-center shadow-md"
                   >
                     <div>
@@ -149,9 +156,17 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                         {flight.departure} → {flight.arrival}
                       </p>
                       <p className="text-gray-600">
-                        Date: {new Date(flight.date).toLocaleDateString('fr-FR')}
+                        Date: {new Date(flight.date || flight.departureDateTime).toLocaleDateString('fr-FR')}
                       </p>
-                      <p className="text-blue-600 font-semibold">Prix: {flight.price}€</p>
+                      <p className="text-gray-600">
+                        Compagnie: {flight.airline || 'Air Senegal'}
+                      </p>
+                      <p className="text-gray-600">
+                        Numéro de vol: {flight.flightNumber || 'SN000'}
+                      </p>
+                      <p className="text-blue-600 font-semibold">
+                        Prix: {flight.price || 0} XOF
+                      </p>
                     </div>
                     <button
                       onClick={() => handleBookFlight(flight)}

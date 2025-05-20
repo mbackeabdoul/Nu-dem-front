@@ -1,0 +1,38 @@
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+button, a, [role="button"] {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+button:hover, a:hover, [role="button"]:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+input:focus, select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+}
+
+.bg-blue-600 {
+  background-color: #2563eb;
+}
+
+.text-blue-600 {
+  color: #2563eb;
+}
+
+.border-blue-600 {
+  border-color: #2563eb;
+}
+
+.bg-gradient-to-b {
+  background: linear-gradient(to bottom, #f9fafb, #e5e7eb);
+}
