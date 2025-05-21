@@ -22,20 +22,23 @@ const AuthModal = () => {
 
   const handleConnexion = async (e) => {
     e.preventDefault();
+    setMessage('');
+    setIsSuccess(false);
     if (!formData.email || !formData.motDePasse) {
       setMessage('Veuillez remplir tous les champs.');
       setIsSuccess(false);
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/auth/connexion', {
+      console.log('Tentative de connexion:', formData.email);
+      const res = await fetch('http://localhost:5000/api/auth/connexion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, motDePasse: formData.motDePasse }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message || 'Erreur lors de la connexion.');
-      login({ _id: data.user._id, prenom: data.user.prenom, nom: data.user.nom, email: data.user.email }, data.token);
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de la connexion.');
+      login(data.user, data.token);
       setMessage('Connexion réussie !');
       setIsSuccess(true);
       setTimeout(() => {
@@ -43,8 +46,8 @@ const AuthModal = () => {
         navigate('/reserver', { state: JSON.parse(localStorage.getItem('selectedFlight')) });
       }, 1000);
     } catch (error) {
-      console.error('Connexion error:', error);
-      setMessage(error.message || 'Une erreur s’est produite lors de la connexion.');
+      console.error('Connexion error:', error.message);
+      setMessage(error.message || 'Jàmm ak jàmm ! Erreur lors de la connexion.');
       setIsSuccess(false);
     }
   };
@@ -53,42 +56,32 @@ const AuthModal = () => {
     e.preventDefault();
     setMessage('');
     setIsSuccess(false);
-
     if (!formData.prenom || !formData.nom || !formData.email || !formData.motDePasse) {
       setMessage('Tous les champs sont requis.');
+      setIsSuccess(false);
       return;
     }
-
     try {
-      const res = await fetch('http://localhost:5000/auth/inscription', {
+      console.log('Tentative d’inscription:', formData.email);
+      const res = await fetch('http://localhost:5000/api/auth/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
-
-      const responseData = await res.json();
-      console.log('Inscription API response:', responseData);
-
-      if (!res.ok) {
-        throw new Error(responseData.message || 'Erreur lors de l’inscription.');
-      }
-
-      setMessage('Inscription réussie ! Redirection vers la connexion...');
+      const data = await res.json();
+      console.log('Inscription API response:', data);
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de l’inscription.');
+      login(data.user, data.token);
+      setMessage('Inscription réussie ! Redirection vers la réservation...');
       setIsSuccess(true);
       setTimeout(() => {
-        setTab('connexion');
-        setFormData({ prenom: '', nom: '', email: '', motDePasse: '' });
-        navigate('/connexion');
+        setShowAuthModal(false);
+        navigate('/reserver', { state: JSON.parse(localStorage.getItem('selectedFlight')) });
       }, 2000);
     } catch (error) {
-      console.error('Inscription error:', error);
-      setMessage('Inscription enregistrée. Veuillez vous connecter pour continuer.');
-      setIsSuccess(true);
-      setTimeout(() => {
-        setTab('connexion');
-        setFormData({ prenom: '', nom: '', email: '', motDePasse: '' });
-        navigate('/connexion');
-      }, 2000);
+      console.error('Inscription error:', error.message);
+      setMessage(error.message || 'Jàmm ak jàmm ! Erreur lors de l’inscription.');
+      setIsSuccess(false);
     }
   };
 

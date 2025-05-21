@@ -1,27 +1,27 @@
-// src/components/Connexion/connexion.jsx
-import React, { useState } from 'react';
-
+import React, { useState, useContext } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { AuthContext } from '../App';
 
 const Connexion = () => {
+  const { login } = useContext(AuthContext);
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     email: '',
-    motDePasse: ''
+    motDePasse: '',
   });
-
   const [message, setMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage('');
+    setIsSuccess(false);
 
     if (!formData.email || !formData.motDePasse) {
       setMessage('Veuillez remplir tous les champs.');
@@ -30,17 +30,21 @@ const Connexion = () => {
     }
 
     try {
-      const res = await axios.post('http://localhost:5000/auth/connexion', formData);
+      console.log('Tentative de connexion:', formData.email);
+      const res = await axios.post('http://localhost:5000/api/auth/connexion', formData);
       console.log('Réponse:', res.data);
 
+      login(res.data.user, res.data.token);
       setMessage('Connexion réussie !');
       setIsSuccess(true);
       setFormData({ email: '', motDePasse: '' });
 
-      window.location.href = '/reserver'; 
+      setTimeout(() => {
+        navigate('/reserver');
+      }, 1000);
     } catch (error) {
-      console.error('Erreur lors de la connexion:', error);
-      const errMsg = error.response?.data?.message || "Une erreur s'est produite.";
+      console.error('Erreur connexion:', error.message);
+      const errMsg = error.response?.data?.error || 'Jàmm ak jàmm ! Erreur lors de la connexion.';
       setMessage(errMsg);
       setIsSuccess(false);
     }
@@ -49,11 +53,11 @@ const Connexion = () => {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 border border-gray-200 rounded-2xl shadow-lg bg-white">
       <h2 className="text-3xl font-semibold mb-6 text-center">Se connecter</h2>
-
       {message && (
-        <p className="mb-4 text-center text-sm text-green-600">{message}</p>
+        <p className={`mb-4 text-center text-sm ${isSuccess ? 'text-green-600' : 'text-red-500'}`}>
+          {message}
+        </p>
       )}
-
       <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block mb-1 text-sm font-medium text-gray-700">Email</label>
@@ -62,11 +66,9 @@ const Connexion = () => {
             name="email"
             value={formData.email}
             onChange={handleChange}
-            placeholder=""
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-
         <div>
           <label className="block mb-1 text-sm font-medium text-gray-700">Mot de passe</label>
           <input
@@ -74,7 +76,6 @@ const Connexion = () => {
             name="motDePasse"
             value={formData.motDePasse}
             onChange={handleChange}
-            placeholder=""
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <div className="mt-2 text-right">
@@ -83,7 +84,6 @@ const Connexion = () => {
             </a>
           </div>
         </div>
-
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"

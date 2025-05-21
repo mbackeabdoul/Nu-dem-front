@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './Inscription.css';
+import { AuthContext } from '../App';
 
 const Inscription = () => {
+  const { login } = useContext(AuthContext);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     prenom: '',
@@ -25,33 +26,35 @@ const Inscription = () => {
 
     if (!formData.prenom || !formData.nom || !formData.email || !formData.motDePasse) {
       setMessage('Tous les champs sont requis.');
+      setIsSuccess(false);
       return;
     }
 
     try {
-      const res = await fetch('http://localhost:5000/auth/inscription', {
+      console.log('Tentative d’inscription:', formData.email);
+      const res = await fetch('http://localhost:5000/api/auth/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
 
       const responseData = await res.json();
+      console.log('Inscription API response:', responseData);
+
       if (!res.ok) {
-        throw new Error(responseData.message || 'Erreur lors de l’inscription.');
+        throw new Error(responseData.error || 'Erreur lors de l’inscription.');
       }
 
-      setMessage('Inscription réussie ! Redirection vers la connexion...');
+      login(responseData.user, responseData.token);
+      setMessage('Inscription réussie ! Redirection vers la réservation...');
       setIsSuccess(true);
       setTimeout(() => {
-        navigate('/connexion');
+        navigate('/reserver');
       }, 2000);
     } catch (error) {
-      console.error('Inscription error:', error);
-      setMessage('Inscription enregistrée, mais une erreur s’est produite. Veuillez vous connecter.');
-      setIsSuccess(true); // Considérer comme succès car l’utilisateur est créé
-      setTimeout(() => {
-        navigate('/connexion');
-      }, 2000);
+      console.error('Inscription error:', error.message);
+      setMessage(error.message || 'Jàmm ak jàmm ! Erreur lors de l’inscription.');
+      setIsSuccess(false);
     }
   };
 
@@ -112,6 +115,14 @@ const Inscription = () => {
             S’inscrire
           </button>
         </form>
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-600">
+            Déjà un compte ?{' '}
+            <a href="/connexion" className="text-blue-600 hover:underline">
+              Se connecter
+            </a>
+          </p>
+        </div>
       </div>
     </section>
   );

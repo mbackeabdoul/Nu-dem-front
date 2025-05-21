@@ -39,28 +39,32 @@ const App = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
-    // Restore session from localStorage
-    const token = localStorage.getItem('token');
-    const user = JSON.parse(localStorage.getItem('user'));
-    if (token && user) {
-      setAuth({ isAuthenticated: true, user, token });
-    }
+  // Restore session from localStorage
+  const token = localStorage.getItem('token');
+  const user = JSON.parse(localStorage.getItem('user'));
+  if (token && user) {
+    setAuth({ isAuthenticated: true, user, token });
+  }
 
-    // Fetch bookings
-    const fetchBookings = async () => {
-      try {
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-        const res = await fetch('http://localhost:5000/api/bookings', { headers });
-        if (!res.ok) throw new Error('Erreur lors de la récupération des réservations');
-        const data = await res.json();
-        setBookings(data);
-      } catch (err) {
-        console.error('Error fetching bookings:', err);
+  // Fetch bookings
+  const fetchBookings = async () => {
+    try {
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const res = await fetch('http://localhost:5000/api/bookings', { headers });
+      if (res.status === 401) {
+        console.log('Token expiré, déconnexion');
+        logout();
+        return;
       }
-    };
-    fetchBookings();
-  }, [auth.token]);
-
+      if (!res.ok) throw new Error('Erreur lors de la récupération des réservations');
+      const data = await res.json();
+      setBookings(data);
+    } catch (err) {
+      console.error('Erreur récupération réservations:', err.message);
+    }
+  };
+  fetchBookings();
+}, [auth.token]);
   const login = (user, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
@@ -86,7 +90,7 @@ const App = () => {
       setFlights(flightsData);
       console.log('Flights found:', flightsData);
     } catch (err) {
-      console.error('Error fetching flights:', err);
+      console.error('Erreur recherche vols:', err.message);
       setFlights([]);
     }
   };
@@ -116,10 +120,15 @@ const App = () => {
         method: 'DELETE',
         headers,
       });
+      if (res.status === 401) {
+        console.log('Token expiré, déconnexion');
+        logout();
+        return;
+      }
       if (!res.ok) throw new Error('Erreur lors de l’annulation de la réservation');
       setBookings(bookings.filter((booking) => booking._id !== id));
     } catch (err) {
-      console.error('Error cancelling booking:', err);
+      console.error('Erreur annulation réservation:', err.message);
     }
   };
 

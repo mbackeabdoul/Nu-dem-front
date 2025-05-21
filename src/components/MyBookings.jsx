@@ -3,7 +3,7 @@ import QRCode from 'react-qr-code';
 import { AuthContext } from '../App';
 
 const MyBookings = ({ bookings, onCancel }) => {
-  const { auth } = useContext(AuthContext);
+  const { auth, setAuth } = useContext(AuthContext);
 
   const downloadTicket = async (bookingId) => {
     try {
@@ -11,6 +11,12 @@ const MyBookings = ({ bookings, onCancel }) => {
       console.log('Downloading ticket for bookingId:', bookingId);
       const res = await fetch(`http://localhost:5000/api/generate-ticket/${bookingId}`, { headers });
       console.log('Response status:', res.status, 'OK:', res.ok);
+      if (res.status === 401) {
+        alert('Session expirée, veuillez vous reconnecter.');
+        setAuth({ isAuthenticated: false, token: null, user: null });
+        localStorage.removeItem('token');
+        return;
+      }
       if (!res.ok) {
         const text = await res.text();
         console.error('Response error:', text);
@@ -24,8 +30,8 @@ const MyBookings = ({ bookings, onCancel }) => {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      console.error('Error downloading ticket:', err);
-      alert('Erreur lors du téléchargement du billet');
+      console.error('Error downloading ticket:', err.message);
+      alert('Jàmm ak jàmm ! Erreur lors du téléchargement du billet.');
     }
   };
 
@@ -38,6 +44,12 @@ const MyBookings = ({ bookings, onCancel }) => {
         headers,
       });
       console.log('Response status:', res.status, 'OK:', res.ok);
+      if (res.status === 401) {
+        alert('Session expirée, veuillez vous reconnecter.');
+        setAuth({ isAuthenticated: false, token: null, user: null });
+        localStorage.removeItem('token');
+        return;
+      }
       if (!res.ok) {
         const text = await res.text();
         console.error('Response error:', text);
@@ -45,8 +57,8 @@ const MyBookings = ({ bookings, onCancel }) => {
       }
       alert('Billet renvoyé par e-mail');
     } catch (err) {
-      console.error('Error resending email:', err);
-      alert('Erreur lors de l’envoi de l’e-mail');
+      console.error('Error resending email:', err.message);
+      alert('Jàmm ak jàmm ! Erreur lors de l’envoi de l’e-mail.');
     }
   };
 
