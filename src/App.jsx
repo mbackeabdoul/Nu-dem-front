@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useContext, useRef } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import SearchForm from './components/SearchForm';
@@ -20,7 +20,7 @@ const App = () => {
   const context = useContext(AuthContext);
   if (!context) {
     console.error('AuthContext is undefined. Ensure App is wrapped in AuthProvider.');
-    return <div>Erreur : Contexte d'authentification non disponible.</div>;
+    return <div>Erreur : Contexte d’authentification non disponible.</div>;
   }
   const { auth } = context;
 
@@ -34,70 +34,34 @@ const App = () => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [flights, setFlights] = useState([]);
-  
-  // Refs pour éviter les toasts multiples
-  const lastSearchRef = useRef('');
-  const isSearchingRef = useRef(false);
-  const bookingsLoadedRef = useRef(false);
 
   useEffect(() => {
     const fetchBookings = async () => {
-      // Éviter de charger plusieurs fois
-      if (bookingsLoadedRef.current) return;
-      
       try {
         const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-        const res = await fetch('https://nu-dem-back.onrender.com/api/bookings', { headers });
+        const res = await fetch('http://localhost:5000/api/bookings', { headers });
         if (!res.ok) throw new Error('Erreur chargement réservations');
         const data = await res.json();
         setBookings(data);
-        bookingsLoadedRef.current = true;
       } catch (err) {
         console.error('Erreur chargement réservations:', err.message);
-        toast.error('Erreur lors du chargement des réservations', {
-          id: 'bookings-error',
-        });
+        toast.error('Erreur chargement réservations');
       }
     };
-    
-    if (auth.isAuthenticated && !bookingsLoadedRef.current) {
-      fetchBookings();
-    } else if (!auth.isAuthenticated) {
-      bookingsLoadedRef.current = false;
-      setBookings([]);
-    }
-  }, [auth.isAuthenticated, auth.token]);
+    if (auth.isAuthenticated) fetchBookings();
+  }, [auth]);
 
   const handleSearchSubmit = async (data) => {
-    // Créer une clé unique pour cette recherche
-    const searchKey = `${data.departure}-${data.arrival}-${data.date}-${data.passengers}`;
-    
-    // Éviter les recherches en double
-    if (isSearchingRef.current || lastSearchRef.current === searchKey) {
-      return;
-    }
-    
-    isSearchingRef.current = true;
-    lastSearchRef.current = searchKey;
-    
     console.log('Recherche soumise:', data);
     setSearchForm(data);
-    
-    // Toast de chargement
-    const loadingToast = toast.loading('Recherche en cours...', {
-      id: 'search-loading',
-    });
-    
     const query = new URLSearchParams({
       departure: data.departure,
       arrival: data.arrival,
       date: data.date,
       passengers: data.passengers.toString(),
     }).toString();
-    
     try {
-      const res = await fetch(`https://nu-dem-back.onrender.com/api/flights?${query}`);
-      
+      const res = await fetch(`http://localhost:5000/api/flights?${query}`);
       if (!res.ok) {
         let errorData;
         try {
@@ -110,45 +74,20 @@ const App = () => {
           status: res.status,
           details: errorData.details,
         });
-        
-        toast.error(`Erreur de recherche : ${errorData.error || 'Veuillez réessayer.'}`, {
-          id: 'search-loading',
-        });
+        toast.error(`Erreur de recherche : ${errorData.error || 'Veuillez réessayer.'}`);
         throw new Error(errorData.error || `Erreur HTTP ${res.status}`);
       }
-      
       const flightsData = await res.json();
       setFlights(flightsData);
       console.log('Vols trouvés:', flightsData);
-      
-      // Toast de succès
-      if (flightsData.length > 0) {
-        toast.success(`${flightsData.length} vol${flightsData.length > 1 ? 's' : ''} trouvé${flightsData.length > 1 ? 's' : ''} !`, {
-          id: 'search-loading',
-        });
-      } else {
-        toast('Aucun vol trouvé pour cette recherche', {
-          icon: 'ℹ️',
-          id: 'search-loading',
-        });
-      }
-      
+      toast.success(`${flightsData.length} vol(s) trouvé(s) !`);
     } catch (err) {
       console.error('Erreur recherche vols:', {
         message: err.message,
         stack: err.stack,
       });
-      
-      toast.error('Erreur lors de la recherche. Vérifiez votre connexion.', {
-        id: 'search-loading',
-      });
+      toast.error('Erreur lors de la recherche des vols. Vérifiez votre connexion ou réessayez.');
       setFlights([]);
-    } finally {
-      isSearchingRef.current = false;
-      // Réinitialiser après un délai pour permettre de nouvelles recherches
-      setTimeout(() => {
-        lastSearchRef.current = '';
-      }, 2000);
     }
   };
 
@@ -168,45 +107,25 @@ const App = () => {
 
   const handleBookingSubmit = async (booking) => {
     setBookings([...bookings, booking]);
-    toast.success('Réservation effectuée avec succès !', {
-      id: 'booking-success',
-    });
   };
 
   const handleCancelBooking = async (id) => {
-    const loadingToast = toast.loading('Annulation en cours...', {
-      id: `cancel-${id}`,
-    });
-    
     try {
       const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-      const res = await fetch(`https://nu-dem-back.onrender.com/api/bookings/${id}`, {
+      const res = await fetch(`http://localhost:5000/api/bookings/${id}`, {
         method: 'DELETE',
         headers,
       });
-      
       if (res.status === 401) {
         console.log('Token expiré, déconnexion');
-        toast.error('Session expirée, veuillez vous reconnecter', {
-          id: `cancel-${id}`,
-        });
         setBookings([]);
-        bookingsLoadedRef.current = false;
         return;
       }
-      
-      if (!res.ok) throw new Error('Erreur lors de l\'annulation de la réservation');
-      
+      if (!res.ok) throw new Error('Erreur lors de l’annulation de la réservation');
       setBookings(bookings.filter((booking) => booking._id !== id));
-      toast.success('Réservation annulée avec succès', {
-        id: `cancel-${id}`,
-      });
-      
     } catch (err) {
       console.error('Erreur annulation réservation:', err.message);
-      toast.error('Erreur lors de l\'annulation', {
-        id: `cancel-${id}`,
-      });
+      toast.error('Erreur annulation réservation');
     }
   };
 

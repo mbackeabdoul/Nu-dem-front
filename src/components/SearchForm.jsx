@@ -1,12 +1,14 @@
 import React, { useState, useContext } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import AsyncSelect from 'react-select/async';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { AuthContext } from '../AuthContext';
 
 const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
+  const location = useLocation();
+  const isSearchPage = location.pathname === '/recherche';
   const context = useContext(AuthContext);
   if (!context) {
     console.error('AuthContext is undefined in SearchForm');
@@ -55,7 +57,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
   const submitHandler = (data) => {
     if (!departure || !arrival) {
       console.error('Départ ou arrivée non sélectionné');
-      setErrorMessage('Veuillez sélectionner une ville de départ et d’arrivée.');
+      setErrorMessage("Veuillez sélectionner une ville de départ et d'arrivée.");
       return;
     }
     const searchData = {
@@ -150,7 +152,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
   return (
     <section id="search-form" className="py-16 bg-white">
       <div className="container mx-auto px-4">
-        <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 -mt-32 relative z-30">
+        <div className={`max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 ${isSearchPage ? 'mt-8' : '-mt-32'} relative z-30`}>
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Trouvez votre prochain vol</h2>
           {errorMessage && (
             <p className="text-red-500 text-sm mb-4 text-center">{errorMessage}</p>
@@ -269,12 +271,12 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
             </div>
             
             {validFlights.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <i className="fas fa-plane text-gray-400 text-3xl"></i>
+              <div className="text-center py-8">
+                <div className="w-16 h-16 mx-auto mb-3 bg-gray-100 rounded-full flex items-center justify-center">
+                  <i className="fas fa-plane text-gray-400 text-xl"></i>
                 </div>
-                <h4 className="text-lg font-medium text-gray-600 mb-2">Aucun vol trouvé</h4>
-                <p className="text-gray-500">Essayez d'autres critères de recherche</p>
+                <h4 className="text-lg font-medium text-gray-600 mb-1">Aucun vol trouvé</h4>
+                <p className="text-gray-500 text-sm">Essayez d'autres critères de recherche</p>
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto pr-2 space-y-4">
