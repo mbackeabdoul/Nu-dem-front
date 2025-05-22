@@ -24,7 +24,7 @@ const AuthModal = ({ context = 'general' }) => {
   const handleConnexion = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5000/api/auth/connexion', {
+      const res = await fetch('https://nu-dem-back.onrender.com/api/auth/connexion', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: formData.email, motDePasse: formData.motDePasse }),
@@ -65,7 +65,7 @@ const AuthModal = ({ context = 'general' }) => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/auth/inscription', {
+      const res = await fetch('https://nu-dem-back.onrender.com/api/auth/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

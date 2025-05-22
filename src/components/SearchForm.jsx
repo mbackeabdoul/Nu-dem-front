@@ -29,7 +29,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
     }
     try {
       console.log('Requête /cities avec keyword:', inputValue);
-      const res = await axios.get(`http://localhost:5000/api/cities?keyword=${encodeURIComponent(inputValue)}`);
+      const res = await axios.get(`https://nu-dem-back.onrender.com/api/cities?keyword=${encodeURIComponent(inputValue)}`);
       const cities = res.data.map(city => ({
         value: city.iataCode,
         label: `${city.name} (${city.iataCode})`,

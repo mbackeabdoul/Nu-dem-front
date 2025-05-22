@@ -21,7 +21,7 @@ const BookingForm = ({ onSubmit }) => {
 
         if (!initialData.departure && localStorage.getItem('selectedFlightId')) {
           try {
-            const res = await fetch(`http://localhost:5000/api/flights/${localStorage.getItem('selectedFlightId')}`);
+            const res = await fetch(`https://nu-dem-back.onrender.com/api/flights/${localStorage.getItem('selectedFlightId')}`);
             if (!res.ok) throw new Error('Erreur lors de la récupération du vol');
             initialData = await res.json();
             console.log('Flight data from API:', initialData);
@@ -173,7 +173,7 @@ const BookingForm = ({ onSubmit }) => {
 
       console.log('Booking data sent to API:', bookingData);
 
-      const bookingRes = await fetch('http://localhost:5000/api/bookings', {
+      const bookingRes = await fetch('https://nu-dem-back.onrender.com/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const BookingForm = ({ onSubmit }) => {
         throw new Error(bookingResponse.error || 'Erreur lors de la création de la réservation');
       }
 
-      const paymentRes = await fetch('http://localhost:5000/api/payments', {
+      const paymentRes = await fetch('https://nu-dem-back.onrender.com/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ bookingId: bookingResponse._id, paymentMethod: data.paymentMethod }),
