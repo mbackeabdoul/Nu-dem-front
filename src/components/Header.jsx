@@ -1,87 +1,152 @@
-import React, { useState, useContext } from 'react';
-import { NavLink } from 'react-router-dom';
-import { AuthContext } from '../App';
+import React, { useContext, useState } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../AuthContext';
+import { toast } from 'react-toastify';
 
 const Header = () => {
-  const { auth, logout, setShowAuthModal } = useContext(AuthContext);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  const context = useContext(AuthContext);
+  if (!context) {
+    console.error('AuthContext is undefined in Header');
+    return null;
+  }
+  
+  const { auth, logout, setShowAuthModal } = context;
+  const navigate = useNavigate();
 
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(!mobileMenuOpen);
+  const handleConnexion = () => {
+    if (auth.isAuthenticated) {
+      logout();
+      toast.success('Déconnexion réussie');
+      navigate('/');
+    } else {
+      setShowAuthModal(true);
+    }
+    setIsMobileMenuOpen(false); // Fermer le menu mobile après action
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
+  const navItems = [
+    { to: '/', label: 'Accueil', icon: 'fas fa-home' },
+    { to: '/recherche', label: 'Recherche', icon: 'fas fa-search' },
+    { to: '/mes-reservations', label: 'Mes Réservations', icon: 'fas fa-calendar-alt' },
+    { to: '/contact', label: 'Contact', icon: 'fas fa-envelope' }
+  ];
+
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        <div className="flex items-center">
-          <div className="bg-blue-600 rounded-full w-10 h-10 flex items-center justify-center mr-3">
-            <i className="fas fa-plane-departure text-white text-lg"></i>
-          </div>
-          <h1 className="text-xl font-bold text-blue-600">
-            Ñu <span className="text-blue-800">Dem</span>
-          </h1>
-        </div>
-
-        <nav className="hidden md:flex space-x-8">
-          <NavLink to="/" className={({ isActive }) => `...`} end>Accueil</NavLink>
-          <NavLink to="/recherche" className={({ isActive }) => `...`}>Recherche</NavLink>
-          <NavLink to="/mes-reservations" className={({ isActive }) => `...`}>Mes Réservations</NavLink>
-          <NavLink to="/contact" className={({ isActive }) => `...`}>Contact</NavLink>
-        </nav>
-
-        <div className="flex items-center">
-          {auth.isAuthenticated ? (
-            <div className="relative group">
-              <button className="hidden md:flex items-center text-gray-700 hover:text-blue-600">
-                Bonjour, {auth.user.prenom} <i className="fas fa-chevron-down ml-2"></i>
-              </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg hidden group-hover:block">
-                <NavLink to="/mes-reservations" className="block px-4 py-2 text-gray-700 hover:bg-blue-50">Mes Réservations</NavLink>
-                <button onClick={logout} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50">Déconnexion</button>
-              </div>
+    <header className="bg-white shadow-lg border-b border-gray-100 sticky top-0 z-50">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center py-3">
+          {/* Logo */}
+          <div className="flex items-center space-x-2">
+            <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-1.5 rounded-md">
+              <i className="fas fa-plane-departure text-white text-lg"></i>
             </div>
-          ) : (
+            <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+              Ñu Dem
+            </h1>
+          </div>
+
+          {/* Navigation Desktop */}
+          <nav className="hidden lg:flex space-x-8">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={closeMobileMenu}
+                className={({ isActive }) =>
+                  `flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 font-medium ${
+                    isActive 
+                      ? 'text-blue-600 bg-blue-50' 
+                      : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                  }`
+                }
+              >
+                <i className={`${item.icon} text-sm`}></i>
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* Actions Desktop */}
+          <div className="hidden md:flex items-center space-x-3">
+            {auth.isAuthenticated && (
+              <div className="flex items-center space-x-2 text-gray-600 text-sm">
+                <i className="fas fa-user-circle"></i>
+                <span>{auth.user?.prenom}</span>
+              </div>
+            )}
             <button
-              onClick={() => setShowAuthModal(true)}
-              className="hidden md:flex bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-300"
+              onClick={handleConnexion}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
             >
-              <i className="fas fa-user mr-2"></i> Connexion
+              {auth.isAuthenticated ? 'Déconnexion' : 'Connexion'}
             </button>
-          )}
-          <button className="md:hidden text-gray-700 focus:outline-none" onClick={toggleMobileMenu} aria-label="Menu">
-            {mobileMenuOpen ? <i className="fas fa-times text-xl"></i> : <i className="fas fa-bars text-xl"></i>}
+          </div>
+
+          {/* Bouton Menu Mobile */}
+          <button
+            onClick={toggleMobileMenu}
+            className="md:hidden p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-100 transition-colors duration-200"
+            aria-label="Menu mobile"
+          >
+            <i className={`fas ${isMobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`}></i>
           </button>
         </div>
+
+        {/* Menu Mobile */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden border-t border-gray-100 py-4">
+            {/* Navigation Mobile */}
+            <nav className="space-y-1 mb-4">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  onClick={closeMobileMenu}
+                  className={({ isActive }) =>
+                    `flex items-center space-x-3 px-4 py-2.5 text-sm transition-colors duration-200 ${
+                      isActive 
+                        ? 'text-blue-600 bg-blue-50 border-l-3 border-blue-600' 
+                        : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                    }`
+                  }
+                >
+                  <i className={`${item.icon} w-4`}></i>
+                  <span>{item.label}</span>
+                </NavLink>
+              ))}
+            </nav>
+
+            {/* Actions Mobile */}
+            <div className="px-4 space-y-3">
+              {auth.isAuthenticated && (
+                <div className="flex items-center space-x-2 p-2 bg-gray-50 rounded-md text-sm">
+                  <i className="fas fa-user text-blue-600"></i>
+                  <span className="text-gray-700">{auth.user?.prenom}</span>
+                </div>
+              )}
+              
+              <button
+                onClick={handleConnexion}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-2.5 rounded-md text-sm font-medium transition-colors duration-200"
+              >
+                {auth.isAuthenticated ? 'Déconnexion' : 'Connexion'}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className={`md:hidden bg-white border-t border-gray-200 transition-all duration-300 ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0 overflow-hidden'}`}>
-        <div className="container mx-auto px-4 py-2">
-          <nav className="flex flex-col space-y-4 py-4">
-            <NavLink to="/" className={({ isActive }) => `...`} onClick={() => setMobileMenuOpen(false)} end>Accueil</NavLink>
-            <NavLink to="/recherche" className={({ isActive }) => `...`} onClick={() => setMobileMenuOpen(false)}>Recherche</NavLink>
-            <NavLink to="/mes-reservations" className={({ isActive }) => `...`} onClick={() => setMobileMenuOpen(false)}>Mes Réservations</NavLink>
-            <NavLink to="/contact" className={({ isActive }) => `...`} onClick={() => setMobileMenuOpen(false)}>Contact</NavLink>
-            <div className="border-t border-gray-200 pt-4 mt-2">
-              {auth.isAuthenticated ? (
-                <>
-                  <NavLink to="/mes-reservations" className="block w-full text-left text-gray-700 hover:bg-blue-50 py-2 px-3">Mes Réservations</NavLink>
-                  <button onClick={logout} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg">Déconnexion</button>
-                </>
-              ) : (
-                <button
-                  onClick={() => {
-                    setShowAuthModal(true);
-                    setMobileMenuOpen(false);
-                  }}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg"
-                >
-                  Connexion
-                </button>
-              )}
-            </div>
-          </nav>
-        </div>
-      </div>
+
     </header>
   );
 };

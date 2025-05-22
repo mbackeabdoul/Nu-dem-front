@@ -1,7 +1,7 @@
 import React, { useEffect, useContext, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthContext } from '../App';
+import { AuthContext } from '../AuthContext';
 import { toast } from 'react-toastify';
 
 const BookingForm = ({ onSubmit }) => {
@@ -11,6 +11,7 @@ const BookingForm = ({ onSubmit }) => {
   const [flightData, setFlightData] = useState(null);
   const [error, setError] = useState('');
   const [isFormReady, setIsFormReady] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const initializeFlightData = async () => {
@@ -43,6 +44,15 @@ const BookingForm = ({ onSubmit }) => {
           }
         }
 
+        // Handle arrivalDateTime: Convert "Non spécifié" to null
+        let arrivalDateTime = initialData.arrivalDateTime || 'Non spécifié';
+        if (arrivalDateTime === 'Non spécifié') {
+          arrivalDateTime = null; // Set to null if not specified
+        } else {
+          const parsedArrivalDate = new Date(arrivalDateTime);
+          arrivalDateTime = !isNaN(parsedArrivalDate.getTime()) ? parsedArrivalDate.toISOString() : null;
+        }
+
         const normalizedData = {
           departure: initialData.departure || 'Non spécifié',
           arrival: initialData.arrival || 'Non spécifié',
@@ -50,6 +60,11 @@ const BookingForm = ({ onSubmit }) => {
           airline: initialData.airline || 'Air Senegal',
           flightNumber: initialData.flightNumber || 'SN000',
           departureDateTime: formattedDateTime,
+          arrivalDateTime: arrivalDateTime, // Now either a valid ISO string or null
+          duration: initialData.duration || 'Non spécifié',
+          seat: initialData.seat || 'Non assigné',
+          checkInTime: initialData.checkInTime || new Date(new Date(formattedDateTime).getTime() - 2 * 60 * 60 * 1000).toISOString(),
+          remainingSeats: initialData.remainingSeats || 'N/A',
         };
 
         console.log('Normalized flight data:', normalizedData);
@@ -67,6 +82,11 @@ const BookingForm = ({ onSubmit }) => {
           airline: 'Air Senegal',
           flightNumber: 'SN000',
           departureDateTime: new Date().toISOString(),
+          arrivalDateTime: null, // Set to null instead of "Non spécifié"
+          duration: 'Non spécifié',
+          seat: 'Non assigné',
+          checkInTime: 'Non spécifié',
+          remainingSeats: 'N/A',
         });
         setIsFormReady(true);
       }
@@ -85,13 +105,18 @@ const BookingForm = ({ onSubmit }) => {
       const defaultValues = {
         customerName: auth.isAuthenticated ? `${auth.user?.prenom || ''} ${auth.user?.nom || ''}`.trim() : '',
         customerEmail: auth.isAuthenticated ? auth.user?.email || '' : '',
-        customerPhone: '',
+        customerPhone: auth.isAuthenticated ? auth.user?.phone || '' : '',
         departure: flightData.departure,
         arrival: flightData.arrival,
         price: flightData.price,
         airline: flightData.airline,
         flightNumber: flightData.flightNumber,
         departureDateTime: flightData.departureDateTime,
+        arrivalDateTime: flightData.arrivalDateTime, // Will be null if "Non spécifié"
+        duration: flightData.duration,
+        seat: flightData.seat,
+        checkInTime: flightData.checkInTime,
+        remainingSeats: flightData.remainingSeats,
         paymentMethod: 'Wave',
       };
       reset(defaultValues);
@@ -99,12 +124,39 @@ const BookingForm = ({ onSubmit }) => {
     }
   }, [flightData, isFormReady, auth, reset]);
 
+  const formatDuration = (duration) => {
+    if (!duration || duration === 'Non spécifié') {
+      return 'Non disponible';
+    }
+    try {
+      const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?/);
+      const hours = match[1] ? parseInt(match[1]) : 0;
+      const minutes = match[2] ? parseInt(match[2]) : 0;
+      return `${hours}h${minutes.toString().padStart(2, '0')}`;
+    } catch (error) {
+      return 'Non disponible';
+    }
+  };
+
   const submitHandler = async (data) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       setError('');
+      if (!auth.isAuthenticated && !localStorage.getItem('guest')) {
+        console.log('Utilisateur non connecté, affichage modal');
+        setShowAuthModal(true);
+        toast.error('Veuillez vous connecter ou continuer en tant qu’invité.');
+        return;
+      }
       if (!flightData || !data.departureDateTime) {
         throw new Error('Données de vol incomplètes.');
       }
+
+      // Ensure arrivalDateTime is either a valid date or null
+      const arrivalDateTime = data.arrivalDateTime && data.arrivalDateTime !== 'Non spécifié'
+        ? new Date(data.arrivalDateTime).toISOString()
+        : null;
 
       const bookingData = {
         ...data,
@@ -112,6 +164,11 @@ const BookingForm = ({ onSubmit }) => {
         ticketNumber: `TKT-${Date.now()}`,
         paymentStatus: 'pending',
         departureDateTime: data.departureDateTime,
+        arrivalDateTime: arrivalDateTime, // Now either a valid ISO string or null
+        duration: data.duration,
+        seat: data.seat,
+        checkInTime: data.checkInTime,
+        remainingSeats: data.remainingSeats,
       };
 
       console.log('Booking data sent to API:', bookingData);
@@ -146,7 +203,7 @@ const BookingForm = ({ onSubmit }) => {
         localStorage.removeItem('selectedFlight');
         localStorage.removeItem('selectedFlightId');
         localStorage.removeItem('guest');
-        toast.success('Réservation confirmée !');
+        toast.success('Paiement réussi ! Réservation confirmée. Vérifiez votre boîte de réception (ou spams) pour télécharger votre billet.');
         navigate('/mes-reservations');
       } else {
         setError('Le paiement a échoué. Veuillez réessayer.');
@@ -156,6 +213,8 @@ const BookingForm = ({ onSubmit }) => {
       console.error('Error in booking or payment:', err);
       setError(err.message || 'Une erreur est survenue.');
       toast.error(err.message || 'Une erreur est survenue.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -173,6 +232,13 @@ const BookingForm = ({ onSubmit }) => {
   const formattedDate = flightData.departureDateTime
     ? new Date(flightData.departureDateTime).toLocaleString('fr-FR')
     : 'Non spécifiée';
+  const formattedArrivalDate = flightData.arrivalDateTime
+    ? new Date(flightData.arrivalDateTime).toLocaleString('fr-FR')
+    : 'Non spécifiée'; // Handle null case
+  const formattedCheckInTime = flightData.checkInTime && flightData.checkInTime !== 'Non spécifié'
+    ? new Date(flightData.checkInTime).toLocaleString('fr-FR')
+    : 'Non spécifiée';
+  const formattedDuration = formatDuration(flightData.duration);
 
   return (
     <section className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
@@ -185,7 +251,7 @@ const BookingForm = ({ onSubmit }) => {
               <label className="block mb-1 text-sm font-medium text-gray-700">Nom complet</label>
               <input
                 {...register('customerName', { required: 'Ce champ est requis' })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               {errors.customerName && <p className="text-red-500 text-sm">{errors.customerName.message}</p>}
             </div>
@@ -193,7 +259,7 @@ const BookingForm = ({ onSubmit }) => {
               <label className="block mb-1 text-sm font-medium text-gray-700">Email</label>
               <input
                 {...register('customerEmail', { required: 'Ce champ est requis', pattern: { value: /^\S+@\S+$/i, message: 'Email invalide' } })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
               />
               {errors.customerEmail && <p className="text-red-500 text-sm">{errors.customerEmail.message}</p>}
             </div>
@@ -201,7 +267,7 @@ const BookingForm = ({ onSubmit }) => {
               <label className="block mb-1 text-sm font-medium text-gray-700">Téléphone</label>
               <input
                 {...register('customerPhone', { required: 'Ce champ est requis', pattern: { value: /^\+221\d{9}$/, message: 'Format: +221123456789' } })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
                 placeholder="+221XXXXXXXXX"
               />
               {errors.customerPhone && <p className="text-red-500 text-sm">{errors.customerPhone.message}</p>}
@@ -239,6 +305,66 @@ const BookingForm = ({ onSubmit }) => {
               />
             </div>
             <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Date d'arrivée</label>
+              <input
+                type="text"
+                value={formattedArrivalDate}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+              />
+              <input
+                type="precision"
+                {...register('arrivalDateTime')}
+                defaultValue={flightData.arrivalDateTime}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Durée</label>
+              <input
+                type="text"
+                value={formattedDuration}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+              />
+              <input
+                type="hidden"
+                {...register('duration')}
+                defaultValue={flightData.duration}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Siège</label>
+              <input
+                {...register('seat')}
+                defaultValue={flightData.seat}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Heure de convocation</label>
+              <input
+                type="text"
+                value={formattedCheckInTime}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+              />
+              <input
+                type="hidden"
+                {...register('checkInTime')}
+                defaultValue={flightData.checkInTime}
+              />
+            </div>
+            <div>
+              <label className="block mb-1 text-sm font-medium text-gray-700">Places restantes</label>
+              <input
+                {...register('remainingSeats')}
+                defaultValue={flightData.remainingSeats}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100"
+              />
+            </div>
+            <div>
               <label className="block mb-1 text-sm font-medium text-gray-700">Compagnie</label>
               <input
                 {...register('airline')}
@@ -248,7 +374,7 @@ const BookingForm = ({ onSubmit }) => {
               />
             </div>
             <div>
-              <label className="block mb-1 text-sm font-medium text-gray-700">Numéro de vol</label>
+              <label class CHURCHName="block mb-1 text-sm font-medium text-gray-700">Numéro de vol</label>
               <input
                 {...register('flightNumber')}
                 defaultValue={flightData.flightNumber}
@@ -269,7 +395,7 @@ const BookingForm = ({ onSubmit }) => {
               <label className="block mb-1 text-sm font-medium text-gray-700">Moyen de paiement</label>
               <select
                 {...register('paymentMethod', { required: 'Ce champ est requis' })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="Wave">Wave</option>
                 <option value="Orange Money">Orange Money</option>
@@ -280,9 +406,12 @@ const BookingForm = ({ onSubmit }) => {
           </div>
           <button
             type="submit"
-            className="mt-6 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-200 cursor-pointer"
+            disabled={isSubmitting}
+            className={`mt-6 w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition duration-200 cursor-pointer ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
-            Confirmer la réservation
+            {isSubmitting ? 'En cours...' : 'Confirmer la réservation'}
           </button>
         </form>
       </div>

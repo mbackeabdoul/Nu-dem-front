@@ -1,283 +1,204 @@
-import React, { useContext } from 'react';
-import QRCode from 'react-qr-code';
-import { AuthContext } from '../App';
+import React, { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../AuthContext.jsx';
+import toast from 'react-hot-toast';
 
 const MyBookings = ({ bookings, onCancel }) => {
-  const { auth, setAuth } = useContext(AuthContext);
+  const { auth } = useContext(AuthContext);
+  const [loading, setLoading] = useState(true);
 
-  const downloadTicket = async (bookingId) => {
-    try {
-      const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-      console.log('Downloading ticket for bookingId:', bookingId);
-      const res = await fetch(`http://localhost:5000/api/generate-ticket/${bookingId}`, { headers });
-      console.log('Response status:', res.status, 'OK:', res.ok);
-      if (res.status === 401) {
-        alert('Session expirée, veuillez vous reconnecter.');
-        setAuth({ isAuthenticated: false, token: null, user: null });
-        localStorage.removeItem('token');
+  useEffect(() => {
+    const fetchBookings = async () => {
+      if (!auth.isAuthenticated) {
+        setLoading(false);
         return;
       }
-      if (!res.ok) {
-        const text = await res.text();
-        console.error('Response error:', text);
-        throw new Error('Erreur lors de la génération du billet');
+      try {
+        const res = await fetch('http://localhost:5000/api/bookings', {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+          },
+        });
+        if (!res.ok) throw new Error('Erreur lors de la récupération des réservations');
+        const data = await res.json();
+        setLoading(false);
+      } catch (err) {
+        console.error('Erreur:', err.message);
+        toast.error('Erreur lors de la récupération des réservations');
+        setLoading(false);
       }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `billet-${bookingId}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error downloading ticket:', err.message);
-      alert('Jàmm ak jàmm ! Erreur lors du téléchargement du billet.');
-    }
-  };
+    };
 
-  const resendEmail = async (bookingId) => {
-    try {
-      const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-      console.log('Resending email for bookingId:', bookingId);
-      const res = await fetch(`http://localhost:5000/api/send-ticket-email/${bookingId}`, {
-        method: 'POST',
-        headers,
-      });
-      console.log('Response status:', res.status, 'OK:', res.ok);
-      if (res.status === 401) {
-        alert('Session expirée, veuillez vous reconnecter.');
-        setAuth({ isAuthenticated: false, token: null, user: null });
-        localStorage.removeItem('token');
-        return;
-      }
-      if (!res.ok) {
-        const text = await res.text();
-        console.error('Response error:', text);
-        throw new Error('Erreur lors de l’envoi de l’e-mail');
-      }
-      alert('Billet renvoyé par e-mail');
-    } catch (err) {
-      console.error('Error resending email:', err.message);
-      alert('Jàmm ak jàmm ! Erreur lors de l’envoi de l’e-mail.');
-    }
-  };
+    fetchBookings();
+  }, [auth]);
 
-  if (!auth.isAuthenticated && bookings.length === 0) {
+  if (loading) {
     return (
-      <section className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
-        <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Mes Réservations</h2>
-          <div className="bg-white rounded-xl shadow-md p-12 text-center max-w-2xl mx-auto">
-            <h3 className="text-xl font-medium text-gray-700 mb-3">Vérifier votre réservation</h3>
-            <form
-              onSubmit={async (e) => {
-                e.preventDefault();
-                const ticketNumber = e.target.ticketNumber.value;
-                const customerEmail = e.target.customerEmail.value;
-                try {
-                  const res = await fetch(`http://localhost:5000/api/get-booking-by-ticket`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ ticketNumber, customerEmail }),
-                  });
-                  if (!res.ok) throw new Error('Réservation non trouvée');
-                  const booking = await res.json();
-                  bookings.push(booking);
-                } catch (err) {
-                  alert('Réservation non trouvée');
-                }
-              }}
-            >
-              <input
-                type="text"
-                name="ticketNumber"
-                placeholder="Numéro de billet"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-              />
-              <input
-                type="email"
-                name="customerEmail"
-                placeholder="Email"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg mb-4"
-              />
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg"
-              >
-                Vérifier
-              </button>
-            </form>
-          </div>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 flex flex-col items-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-500 border-t-transparent mb-4"></div>
+          <p className="text-gray-600 font-medium">Chargement de vos réservations...</p>
         </div>
-      </section>
+      </div>
     );
   }
 
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'confirmé':
+      case 'confirmed':
+      case 'completed':
+      case 'paid':
+        return 'bg-green-100 text-green-800 border-green-200';
+      case 'en_attente':
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'annulé':
+      case 'cancelled':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleString('fr-FR', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
   return (
-    <section className="py-16 bg-gradient-to-b from-gray-50 to-gray-100">
-      <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">Mes Réservations</h2>
-        <div className="grid grid-cols-1 gap-8 max-w-5xl mx-auto">
-          {bookings.map((booking) => (
-            <div key={booking._id} className="bg-white rounded-xl shadow-lg overflow-hidden">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 text-white">
-                <div className="flex justify-between items-center">
-                  <h3 className="text-xl font-bold">Réservation #{booking.ticketNumber}</h3>
-                  <span
-                    className={`py-1 px-3 rounded-full text-xs font-medium ${
-                      booking.paymentStatus === 'completed' ? 'bg-green-500' : 'bg-yellow-500'
-                    }`}
-                  >
-                    {booking.paymentStatus === 'completed' ? 'Payé' : 'En attente'}
-                  </span>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex flex-col md:flex-row justify-between mb-6">
-                  <div className="mb-4 md:mb-0">
-                    <div className="text-sm text-gray-500 mb-1">Compagnie</div>
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center mr-3">
-                        <span className="font-bold text-gray-600">{booking.airline.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <div className="font-medium">{booking.airline}</div>
-                        <div className="text-sm text-gray-500">Vol {booking.flightNumber}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{booking.departure}</div>
-                      <div className="text-xs text-gray-500">Départ</div>
-                    </div>
-                    <div className="mx-4 flex-grow">
-                      <div className="relative h-0.5 bg-gray-300 w-full">
-                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-5 w-5 text-blue-600"
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-                          </svg>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-10">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+            Mes Réservations
+          </h1>
+          <div className="w-24 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 mx-auto rounded-full"></div>
+        </div>
+
+        {bookings.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-xl p-12 text-center">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Aucune réservation trouvée
+            </h3>
+            <p className="text-gray-600">
+              Vous n'avez encore effectué aucune réservation.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {bookings.map((booking, index) => (
+              <div
+                key={booking._id}
+                className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-100"
+              >
+                <div className="p-6">
+                  {/* Route principale */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex flex-col items-center">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <div className="w-0.5 h-8 bg-gray-300 my-1"></div>
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        </div>
+                        <div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {booking.departure}
+                          </div>
+                          <div className="text-sm text-gray-500 my-1">vers</div>
+                          <div className="text-lg font-semibold text-gray-900">
+                            {booking.arrival}
+                          </div>
                         </div>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <div className="font-bold text-lg">{booking.arrival}</div>
-                      <div className="text-xs text-gray-500">Arrivée</div>
+                    {/* Statut */}
+                    <div className={`px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(booking.paymentStatus)}`}>
+                      {booking.paymentStatus || 'En attente'}
                     </div>
                   </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Passager</div>
-                    <div className="font-medium">{booking.customerName}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Contact</div>
-                    <div className="font-medium">{booking.customerEmail}</div>
-                    <div className="text-sm">{booking.customerPhone}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Date de départ</div>
-                    <div className="font-medium">
-                      {new Date(booking.departureDateTime).toLocaleString('fr-FR', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+
+                  {/* Informations détaillées */}
+                  <div className="grid md:grid-cols-2 gap-6 mb-6">
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0h6m-6 0l-2 10h10l-2-10" />
+                        </svg>
+                        <div>
+                          <p className="text-sm text-gray-500">Numéro de ticket</p>
+                          <p className="font-semibold text-gray-900">{booking.ticketNumber}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-5 h-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                        </svg>
+                        <div>
+                          <p className="text-sm text-gray-500">Prix</p>
+                          <p className="font-semibold text-gray-900">
+                            {booking.price ? `${booking.price} €` : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3">
+                        <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3a2 2 0 012-2h4a2 2 0 012 2v4m-6 0V9a2 2 0 012-2h4a2 2 0 012 2v2m-6 4h6m-6 0v4a2 2 0 002 2h4a2 2 0 002-2v-4" />
+                        </svg>
+                        <div>
+                          <p className="text-sm text-gray-500">Date et heure de départ</p>
+                          <p className="font-semibold text-gray-900">
+                            {formatDate(booking.departureDateTime)}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-sm text-gray-500 mb-1">Prix</div>
-                    <div className="font-bold text-lg text-blue-600">{booking.price} XOF</div>
-                  </div>
-                </div>
-                <div className="flex flex-col md:flex-row items-center border-t pt-6">
-                  <div
-                    id={`qr-${booking._id}`}
-                    className="mb-4 md:mb-0 md:mr-6 p-3 bg-white border border-gray-200 rounded-lg"
-                  >
-                    <QRCode
-                      value={`http://localhost:5000/api/verify-ticket/${booking.ticketNumber}?token=${booking.ticketToken}`}
-                      size={120}
-                    />
-                  </div>
-                  <div className="flex flex-col space-y-3 w-full md:w-auto">
-                    <button
-                      onClick={() => downloadTicket(booking._id)}
-                      disabled={!booking.emailSent}
-                      className={`${
-                        booking.emailSent
-                          ? 'bg-blue-600 hover:bg-blue-700'
-                          : 'bg-gray-400 cursor-not-allowed'
-                      } text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center`}
-                      title={
-                        booking.emailSent
-                          ? 'Télécharger le billet'
-                          : 'Veuillez attendre la réception de l’email'
-                      }
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                    <div className="text-sm text-gray-500">
+                      Réservation #{index + 1}
+                    </div>
+                    <div className="flex space-x-3">
+                      <a
+                        href={`http://localhost:5000/api/generate-ticket/${booking._id}`}
+                        className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
-                        <path
-                          fillRule="evenodd"
-                          d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Télécharger le billet
-                    </button>
-                    <button
-                      onClick={() => resendEmail(booking._id)}
-                      className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 flex items-center justify-center"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
+                        Télécharger le billet
+                      </a>
+                      <button
+                        onClick={() => onCancel(booking._id)}
+                        className="bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white font-medium py-2.5 px-6 rounded-lg transition-all duration-300 transform hover:scale-105 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                       >
-                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
-                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
-                      </svg>
-                      Renvoyer l’e-mail
-                    </button>
-                    <button
-                      onClick={() => onCancel(booking._id)}
-                      className="border border-red-500 text-red-500 hover:bg-red-50 font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center justify-center"
-                    >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 mr-2"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                      Annuler la réservation
-                    </button>
+                        Annuler la réservation
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
-    </section>
+    </div>
   );
 };
 

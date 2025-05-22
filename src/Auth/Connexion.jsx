@@ -1,7 +1,7 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { AuthContext } from '../App';
+import toast from 'react-hot-toast';
+import { AuthContext } from '../AuthContext.jsx';
 
 const Connexion = () => {
   const { login } = useContext(AuthContext);
@@ -10,79 +10,70 @@ const Connexion = () => {
     email: '',
     motDePasse: '',
   });
-  const [message, setMessage] = useState('');
-  const [isSuccess, setIsSuccess] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage('');
-    setIsSuccess(false);
-
-    if (!formData.email || !formData.motDePasse) {
-      setMessage('Veuillez remplir tous les champs.');
-      setIsSuccess(false);
-      return;
+ // Dans Connexion.jsx
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setError('');
+  if (!formData.email || !formData.motDePasse) {
+    setError('Veuillez remplir tous les champs.');
+    return;
+  }
+  try {
+    const res = await fetch('http://localhost:5000/api/auth/connexion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur lors de la connexion.');
+    login(data.user, data.token);
+    toast.success('Connexion réussie !');
+    const pendingFlight = JSON.parse(localStorage.getItem('pendingFlight'));
+    if (pendingFlight) {
+      localStorage.setItem('selectedFlight', JSON.stringify(pendingFlight));
+      localStorage.setItem('selectedFlightId', pendingFlight.id || 'unknown');
+      localStorage.removeItem('pendingFlight');
+      navigate('/reserver', { state: pendingFlight });
+    } else {
+      navigate('/recherche');
     }
-
-    try {
-      console.log('Tentative de connexion:', formData.email);
-      const res = await axios.post('http://localhost:5000/api/auth/connexion', formData);
-      console.log('Réponse:', res.data);
-
-      login(res.data.user, res.data.token);
-      setMessage('Connexion réussie !');
-      setIsSuccess(true);
-      setFormData({ email: '', motDePasse: '' });
-
-      setTimeout(() => {
-        navigate('/reserver');
-      }, 1000);
-    } catch (error) {
-      console.error('Erreur connexion:', error.message);
-      const errMsg = error.response?.data?.error || 'Jàmm ak jàmm ! Erreur lors de la connexion.';
-      setMessage(errMsg);
-      setIsSuccess(false);
-    }
-  };
+  } catch (err) {
+    setError(err.message || 'Erreur lors de la connexion.');
+    toast.error(err.message || 'Erreur lors de la connexion.');
+  }
+};
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 border border-gray-200 rounded-2xl shadow-lg bg-white">
-      <h2 className="text-3xl font-semibold mb-6 text-center">Se connecter</h2>
-      {message && (
-        <p className={`mb-4 text-center text-sm ${isSuccess ? 'text-green-600' : 'text-red-500'}`}>
-          {message}
-        </p>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
+    <div className="container mx-auto px-4 py-8">
+      <h2 className="text-2xl font-bold mb-4 text-center">Connexion</h2>
+      {error && <p className="text-red-500 text-center mb-4">{error}</p>}
+      <form onSubmit={handleSubmit} className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+        <div className="mb-4">
           <label className="block mb-1 text-sm font-medium text-gray-700">Email</label>
           <input
             type="email"
             name="email"
             value={formData.email}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <div>
+        <div className="mb-4">
           <label className="block mb-1 text-sm font-medium text-gray-700">Mot de passe</label>
           <input
             type="password"
             name="motDePasse"
             value={formData.motDePasse}
             onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
-          <div className="mt-2 text-right">
-            <a href="/mot-de-passe-oublie" className="text-sm text-blue-600 hover:underline">
-              Mot de passe oublié ?
-            </a>
-          </div>
         </div>
         <button
           type="submit"
@@ -90,14 +81,6 @@ const Connexion = () => {
         >
           Se connecter
         </button>
-        <div className="text-end mt-4">
-          <p className="text-sm text-gray-600">
-            Pas encore de compte ?{' '}
-            <a href="/inscription" className="text-blue-600 hover:underline">
-              S'inscrire
-            </a>
-          </p>
-        </div>
       </form>
     </div>
   );
