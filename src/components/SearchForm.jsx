@@ -1,8 +1,13 @@
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import Select from 'react-select';
 
 const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
+  const [countries, setCountries] = useState([]);
+  const [countryOptions, setCountryOptions] = useState([]);
+  
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: searchForm,
   });
@@ -43,6 +48,25 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
     localStorage.setItem('selectedFlight', JSON.stringify(flightData));
     navigate('/reserver', { state: flightData });
   };
+// Charger les pays depuis l'API
+useEffect(() => {
+  fetch('https://restcountries.com/v3.1/all')
+    .then((res) => res.json())
+    .then((data) => {
+      const options = data
+        .filter((country) => 
+          country.capital && country.capital.length > 0)
+        .map((country) => ({
+          label: `${country.name.common} - ${country.capital[0]} `,
+          value: country.name.common,
+          capital: country.capital[0],
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label));
+      setCountries(data); 
+      setCountryOptions(options); 
+    })
+    .catch((err) => console.error('Erreur lors du chargement des pays', err));
+}, []);
 
   return (
     <section id="search-form" className="py-16 bg-white">
@@ -51,41 +75,38 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Trouvez votre prochain vol</h2>
           <form onSubmit={handleSubmit(submitHandler)}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              {/* Ville de départ */}
               <div>
                 <label htmlFor="departure" className="block text-sm font-medium text-gray-700 mb-1">
-                  Ville de départ
+                    Ville de départ
                 </label>
-                <div className="relative">
-                  <i className="fas fa-plane-departure absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                  <input
-                    type="text"
-                    id="departure"
-                    {...register('departure', { required: 'La ville de départ est requise' })}
-                    placeholder="Dakar, Sénégal"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  />
-                  {errors.departure && (
-                    <p className="text-red-500 text-xs mt-1">{errors.departure.message}</p>
-                  )}
-                </div>
+                <Select
+                  options={countryOptions}
+                  onChange={(selected) => setValue('departure', selected?.value)}
+                  {...register('departure', { required: 'La ville de départ est requise' })}
+                  placeholder="Sélectionnez un pays"
+                  defaultValue={countryOptions.find(option => option.value === searchForm.departure)}
+                />
+                {errors.departure && (
+                  <p className="text-red-500 text-xs mt-1">{errors.departure.message}</p>
+                )}
               </div>
+
+              {/* Pays d'arrivée */}
               <div>
                 <label htmlFor="arrival" className="block text-sm font-medium text-gray-700 mb-1">
                   Ville d'arrivée
                 </label>
-                <div className="relative">
-                  <i className="fas fa-plane-arrival absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
-                  <input
-                    type="text"
-                    id="arrival"
-                    {...register('arrival', { required: "La ville d'arrivée est requise" })}
-                    placeholder="Paris, France"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  />
-                  {errors.arrival && (
-                    <p className="text-red-500 text-xs mt-1">{errors.arrival.message}</p>
-                  )}
-                </div>
+                <Select
+                  options={countryOptions}
+                  onChange={(selected) => setValue('arrival', selected?.value)}
+                  {...register('arrival', { required: "La ville d'arrivée est requise" })}
+                  placeholder="Sélectionnez un pays"
+                  defaultValue={countryOptions.find(option => option.value === searchForm.arrival)}
+                />
+                {errors.arrival && (
+                  <p className="text-red-500 text-xs mt-1">{errors.arrival.message}</p>
+                )}
               </div>
               <div>
                 <label htmlFor="date" className="block text-sm font-medium text-gray-700 mb-1">
@@ -121,7 +142,7 @@ const SearchForm = ({ searchForm, setSearchForm, onSubmit, flights }) => {
                         {num} {num === 1 ? 'passager' : 'passagers'}
                       </option>
                     ))}
-                  </select>
+                  </select>                                                       
                   <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                     <i className="fas fa-chevron-down"></i>
                   </div>

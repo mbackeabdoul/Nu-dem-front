@@ -38,7 +38,7 @@ const App = () => {
   });
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  useEffect(() => {
+  useEffect(() => {              
     // Restore session from localStorage
     const token = localStorage.getItem('token');
     const user = JSON.parse(localStorage.getItem('user'));
