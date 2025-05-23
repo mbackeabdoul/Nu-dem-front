@@ -17,38 +17,38 @@ const Connexion = () => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
- // Dans Connexion.jsx
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  setError('');
-  if (!formData.email || !formData.motDePasse) {
-    setError('Veuillez remplir tous les champs.');
-    return;
-  }
-  try {
-    const res = await fetch('http://localhost:5000/api/auth/connexion', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur lors de la connexion.');
-    login(data.user, data.token);
-    toast.success('Connexion réussie !');
-    const pendingFlight = JSON.parse(localStorage.getItem('pendingFlight'));
-    if (pendingFlight) {
-      localStorage.setItem('selectedFlight', JSON.stringify(pendingFlight));
-      localStorage.setItem('selectedFlightId', pendingFlight.id || 'unknown');
-      localStorage.removeItem('pendingFlight');
-      navigate('/reserver', { state: pendingFlight });
-    } else {
-      navigate('/recherche');
+  // Dans Connexion.jsx
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!formData.email || !formData.motDePasse) {
+      setError('Veuillez remplir tous les champs.');
+      return;
     }
-  } catch (err) {
-    setError(err.message || 'Erreur lors de la connexion.');
-    toast.error(err.message || 'Erreur lors de la connexion.');
-  }
-};
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/connexion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Erreur lors de la connexion.');
+      login(data.user, data.token);
+      toast.success('Connexion réussie !');
+      const pendingFlight = JSON.parse(localStorage.getItem('pendingFlight'));
+      if (pendingFlight) {
+        localStorage.setItem('selectedFlight', JSON.stringify(pendingFlight));
+        localStorage.setItem('selectedFlightId', pendingFlight.id || 'unknown');
+        localStorage.removeItem('pendingFlight');
+        navigate('/reserver', { state: pendingFlight });
+      } else {
+        navigate('/recherche');
+      }
+    } catch (err) {
+      setError(err.message || 'Erreur lors de la connexion.');
+      toast.error(err.message || 'Erreur lors de la connexion.');
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -74,7 +74,13 @@ const handleSubmit = async (e) => {
             onChange={handleChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
           />
+          <div className="flex justify-end mt-1">
+            <a href="/forgetpassword" className="text-sm text-blue-600 hover:text-blue-800">
+              Mot de passe oublié ?
+            </a>
+          </div>
         </div>
+
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition duration-200"

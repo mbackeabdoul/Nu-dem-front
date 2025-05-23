@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, createContext } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import SearchForm from './components/SearchForm';
@@ -13,17 +12,17 @@ import CountryModal from './components/CountryModal';
 import BookingForm from './components/BookingForm';
 import MyBookings from './components/MyBookings';
 import AuthModal from './components/AuthModal';
+import Connexion from './Auth/Connexion';
+import Inscription from './Auth/Inscriptions';
 import ErrorBoundary from './components/ErrorBoundary';
-import { AuthContext } from './AuthContext.jsx';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import ForgetPassword from './Auth/ForgetPassword';
+import ReinitialisationMotDePasse from './Auth/ReinitialiserPassword';
+
+export const AuthContext = createContext();
 
 const App = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    console.error('AuthContext is undefined. Ensure App is wrapped in AuthProvider.');
-    return <div>Erreur : Contexte d’authentification non disponible.</div>;
-  }
-  const { auth } = context;
-
   const [searchForm, setSearchForm] = useState({
     departure: '',
     arrival: '',
@@ -34,59 +33,62 @@ const App = () => {
   const [selectedCountry, setSelectedCountry] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [flights, setFlights] = useState([]);
+  const [auth, setAuth] = useState({
+    isAuthenticated: false,
+    user: null,
+    token: null,
+  });
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
-  useEffect(() => {
+  useEffect(() => {              
+    // Restore session from localStorage
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user'));
+    if (token && user) {
+      setAuth({ isAuthenticated: true, user, token });
+    }
+
+    // Fetch bookings
     const fetchBookings = async () => {
       try {
-        const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
         const res = await fetch('http://localhost:5000/api/bookings', { headers });
-        if (!res.ok) throw new Error('Erreur chargement réservations');
+        if (!res.ok) throw new Error('Erreur lors de la récupération des réservations');
         const data = await res.json();
         setBookings(data);
       } catch (err) {
-        console.error('Erreur chargement réservations:', err.message);
-        toast.error('Erreur chargement réservations');
+        console.error('Error fetching bookings:', err);
       }
     };
-    if (auth.isAuthenticated) fetchBookings();
-  }, [auth]);
+    fetchBookings();
+  }, [auth.token]);
+
+  const login = (user, token) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setAuth({ isAuthenticated: true, user, token });
+    setShowAuthModal(false);
+  };
+
+  const logout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setAuth({ isAuthenticated: false, user: null, token: null });
+    setBookings([]);
+  };
 
   const handleSearchSubmit = async (data) => {
     console.log('Recherche soumise:', data);
     setSearchForm(data);
-    const query = new URLSearchParams({
-      departure: data.departure,
-      arrival: data.arrival,
-      date: data.date,
-      passengers: data.passengers.toString(),
-    }).toString();
+    const query = new URLSearchParams(data).toString();
     try {
       const res = await fetch(`http://localhost:5000/api/flights?${query}`);
-      if (!res.ok) {
-        let errorData;
-        try {
-          errorData = await res.json();
-        } catch (e) {
-          errorData = { error: 'Réponse serveur invalide' };
-        }
-        console.error('Erreur backend:', {
-          message: errorData.error,
-          status: res.status,
-          details: errorData.details,
-        });
-        toast.error(`Erreur de recherche : ${errorData.error || 'Veuillez réessayer.'}`);
-        throw new Error(errorData.error || `Erreur HTTP ${res.status}`);
-      }
+      if (!res.ok) throw new Error('Erreur lors de la recherche des vols');
       const flightsData = await res.json();
       setFlights(flightsData);
-      console.log('Vols trouvés:', flightsData);
-      toast.success(`${flightsData.length} vol(s) trouvé(s) !`);
+      console.log('Flights found:', flightsData);
     } catch (err) {
-      console.error('Erreur recherche vols:', {
-        message: err.message,
-        stack: err.stack,
-      });
-      toast.error('Erreur lors de la recherche des vols. Vérifiez votre connexion ou réessayez.');
+      console.error('Error fetching flights:', err);
       setFlights([]);
     }
   };
@@ -116,79 +118,81 @@ const App = () => {
         method: 'DELETE',
         headers,
       });
-      if (res.status === 401) {
-        console.log('Token expiré, déconnexion');
-        setBookings([]);
-        return;
-      }
       if (!res.ok) throw new Error('Erreur lors de l’annulation de la réservation');
       setBookings(bookings.filter((booking) => booking._id !== id));
     } catch (err) {
-      console.error('Erreur annulation réservation:', err.message);
-      toast.error('Erreur annulation réservation');
+      console.error('Error cancelling booking:', err);
     }
   };
 
   return (
-    <Router>
-      <div className="min-h-screen flex flex-col bg-gray-50">
-        <Header />
-        <Routes>
-          <Route
-            path="/"
-            element={
-              <>
-                <Hero />
+    <AuthContext.Provider value={{ auth, login, logout, setShowAuthModal }}>
+      <Router>
+        <div className="min-h-screen flex flex-col bg-gray-50">
+          <ToastContainer />
+          <Header />
+          <Routes>
+            <Route
+              path="/"
+              element={
+                <>
+                  <Hero />
+                  <SearchForm
+                    searchForm={searchForm}
+                    setSearchForm={setSearchForm}
+                    onSubmit={handleSearchSubmit}
+                    flights={flights}
+                  />
+                  <PopularDestinations onCountryClick={handleCountryClick} />
+                  <Features />
+                  <FAQ />
+                  <CTA />
+                </>
+              }
+            />
+            <Route
+              path="/recherche"
+              element={
                 <SearchForm
                   searchForm={searchForm}
                   setSearchForm={setSearchForm}
                   onSubmit={handleSearchSubmit}
                   flights={flights}
                 />
-                <PopularDestinations onCountryClick={handleCountryClick} />
-                <Features />
-                <FAQ />
-                <CTA />
-              </>
-            }
-          />
-          <Route
-            path="/recherche"
-            element={
-              <SearchForm
-                searchForm={searchForm}
-                setSearchForm={setSearchForm}
-                onSubmit={handleSearchSubmit}
-                flights={flights}
-              />
-            }
-          />
-          <Route
-            path="/reserver"
-            element={
-              <ErrorBoundary>
-                <BookingForm onSubmit={handleBookingSubmit} />
-              </ErrorBoundary>
-            }
-          />
-          <Route
-            path="/mes-reservations"
-            element={
-              <MyBookings bookings={bookings} onCancel={handleCancelBooking} />
-            }
-          />
-        </Routes>
-        <Footer />
-        {isModalOpen && selectedCountry && (
-          <CountryModal
-            country={selectedCountry}
-            onClose={() => setIsModalOpen(false)}
-            onCitySelect={handlePreFillSearch}
-          />
-        )}
-        <AuthModal context="reservation" />
-      </div>
-    </Router>
+              }
+            />
+            <Route
+              path="/reserver"
+              element={
+                <ErrorBoundary>
+                  <BookingForm onSubmit={handleBookingSubmit} />
+                </ErrorBoundary>
+              }
+            />
+            <Route
+              path="/mes-reservations"
+              element={
+                <MyBookings bookings={bookings} onCancel={handleCancelBooking} />
+              }
+            />
+            <Route path="/connexion" element={<Connexion />} />
+            <Route path="/inscription" element={<Inscription />} />
+            <Route path="/forgetpassword" element={<ForgetPassword />} />
+            <Route path="/reinitialiser" element={<ReinitialisationMotDePasse />} />
+            <Route path="/reinitialiser-mot-de-passe/:token" element={<ReinitialisationMotDePasse />} />
+          </Routes>
+          <Footer />
+          {isModalOpen && selectedCountry && (
+            <CountryModal
+              country={selectedCountry}
+              onClose={() => setIsModalOpen(false)}
+              onCitySelect={handlePreFillSearch}
+            />
+          )}
+          {showAuthModal && <AuthModal />}
+        </div>
+      </Router>
+    </AuthContext.Provider>
   );
 };
 
