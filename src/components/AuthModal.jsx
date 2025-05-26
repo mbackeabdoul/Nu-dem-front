@@ -171,6 +171,7 @@ const AuthModal = ({ context = 'general' }) => {
             >
               Se connecter
             </button>
+             <a href="/mot-de-passe-oublie" className="text-blue-600 hover:underline text-sm">Mot de passe oublié ?</a>
           </form>
         )}
         {tab === 'inscription' && (
