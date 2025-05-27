@@ -74,69 +74,92 @@ const PopularDestinations = () => {
   if (error) return <p className="text-red-500 text-center">{error}</p>;
 
   return (
-    <div className="px-4 py-6">
-      <h2 className="text-2xl font-bold text-center mb-6">Les vols les plus populaires</h2>
+    <div className="px-4 py-8">
+      <h2 className="text-2xl font-semibold text-center mb-8 text-gray-800 font-bold">Les vols les plus populaires</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {flights.slice(0, 8).map((flight) => (
-          <div key={flight.id} className="bg-white rounded-xl shadow-md p-4">
+          <div
+            key={flight.id}
+            className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200"
+          >
             <img
-              src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34"
-              alt="Avion"
-              className="w-full h-40 object-cover rounded-md mb-3"
+              src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05"
+              alt="Destination"
+              className="w-full h-36 object-cover"
             />
-            <div className="font-semibold text-gray-800 mb-1">{flight.airline}</div>
 
-            {flight.segments && flight.segments.map((segment, index) => (
-              <div key={index} className="text-sm text-gray-600">
-                {segment.departure} → {segment.arrival}
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-medium text-gray-900">
+                  {flight.segments && flight.segments[0]?.departure} → {flight.segments && flight.segments[0]?.arrival}
+                </h3>
+                <span className="bg-blue-50 text-blue-600 text-xs px-2 py-1 rounded-full">
+                  {flight.airline}
+                </span>
               </div>
-            ))}
 
-            <div className="text-lg font-bold text-blue-600 text-end mt-2">
-              {flight.price} {flight.currency}
+              <div className="flex justify-between items-end mt-4">
+                <span className="text-2xl font-light text-gray-900">
+                  {flight.price}
+                  <span className="text-sm text-gray-500 ml-1">{flight.currency}</span>
+                </span>
+                <button
+                  onClick={() => handleBookClick(flight)}
+                  className="text-white  p-2 font-medium text-sm bg-blue-600 font-bold transition-colors"
+                >
+                  Réserver →
+                </button>
+              </div>
             </div>
-
-            <button
-              onClick={() => handleBookClick(flight)}
-              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-            >
-              Réserver maintenant
-            </button>
           </div>
         ))}
       </div>
 
       {showModal && selectedFlight && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-md">
-            <h3 className="text-xl font-semibold mb-4 text-center">Confirmation de réservation</h3>
-
-            <p className="text-gray-700 mb-2">
-              Voulez-vous réserver ce vol avec <b>{selectedFlight.airline}</b> ?
-            </p>
-
-            <div className="mb-4">
-              {selectedFlight.segments && selectedFlight.segments.map((segment, index) => (
-                <div key={index} className="text-sm text-gray-700">
-                  {segment.departure} → {segment.arrival}
-                </div>
-              ))}
-              <p className="mt-2 font-bold">
-                {selectedFlight.price} {selectedFlight.currency}
-              </p>
-            </div>
-
-            <div className="flex justify-between">
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Confirmer votre réservation</h3>
+                <p className="text-gray-500 text-sm">Vol avec {selectedFlight.airline}</p>
+              </div>
               <button
                 onClick={closeModal}
-                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              {selectedFlight.segments && selectedFlight.segments.map((segment, index) => (
+                <div key={index} className="flex items-center text-gray-700">
+                  <span className="w-20 text-gray-500">Vol {index + 1}</span>
+                  <span>{segment.departure} → {segment.arrival}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-gray-100 pt-4 mb-6">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total</span>
+                <span className="text-xl font-medium">
+                  {selectedFlight.price} {selectedFlight.currency}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                onClick={closeModal}
+                className="flex-1 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
               >
                 Annuler
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
+                className="flex-1 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Confirmer
               </button>
