@@ -27,7 +27,7 @@ const Inscription = () => {
       return;
     }
     try {
-      const res = await fetch('http://localhost:5000/api/auth/inscription', {
+      const res = await fetch('https://nu-dem-back.onrender.com/api/auth/inscription', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),

@@ -13,7 +13,7 @@ const MyBookings = ({ bookings, onCancel }) => {
         return;
       }
       try {
-        const res = await fetch('http://localhost:5000/api/bookings', {
+        const res = await fetch('https://nu-dem-back.onrender.com/api/bookings', {
           headers: {
             Authorization: `Bearer ${auth.token}`,
           },

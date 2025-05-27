@@ -116,7 +116,7 @@ const App = () => {
     const fetchBookings = async () => {
       try {
         const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-        const res = await fetch('http://localhost:5000/api/bookings', { headers });
+        const res = await fetch('https://nu-dem-back.onrender.com/api/bookings', { headers });
         if (!res.ok) throw new Error('Erreur chargement réservations');
         const data = await res.json();
         setBookings(data);
@@ -146,7 +146,7 @@ const App = () => {
     }).toString();
 
     try {
-      const res = await fetch(`http://localhost:5000/api/flights?${query}`);
+      const res = await fetch(`https://nu-dem-back.onrender.com/api/flights?${query}`);
       if (!res.ok) {
         let errorData;
         try {
@@ -187,7 +187,7 @@ const App = () => {
   const handleCancelBooking = async (id) => {
     try {
       const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-      const res = await fetch(`http://localhost:5000/api/bookings/${id}`, {
+      const res = await fetch(`https://nu-dem-back.onrender.com/api/bookings/${id}`, {
         method: 'DELETE',
         headers,
       });
