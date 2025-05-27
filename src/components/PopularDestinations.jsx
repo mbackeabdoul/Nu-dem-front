@@ -1,55 +1,145 @@
-import React from 'react';
-import { popularCities } from '../data/popularCities';
+// PopularDestinations.jsx
+import React, { useEffect, useState, useContext } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../AuthContext';
 
-const PopularDestinations = ({ onCountryClick }) => {
+
+const PopularDestinations = () => {
+  const [flights, setFlights] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedFlight, setSelectedFlight] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const authContext = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    setIsAuthenticated(!!token);
+  }, []);
+
+  const fetchPopularFlights = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const response = await axios.get('https://nu-dem-back.onrender.com/api/flights', {
+        params: {
+          departure: flights.departure || 'DSS',
+          arrival: flights.arrival || 'CDG',
+          date: today,
+        },
+      });
+      setFlights(response.data);
+    } catch (err) {
+      setError('Erreur lors du chargement des vols.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPopularFlights();
+  }, []);
+ 
+  const handleBookClick = (flight) => {
+    if (!isAuthenticated) {
+      localStorage.setItem('pendingFlight', JSON.stringify(flight));
+      authContext.setShowAuthModal(true);
+    } else {
+      // L'utilisateur est connecté → on affiche la modale de confirmation
+      setSelectedFlight(flight);
+      setShowModal(true);
+  
+    }
+    
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setSelectedFlight(null);
+  };
+  const handleConfirm = () => {
+    if (!selectedFlight) return;
+  
+    localStorage.setItem('selectedFlight', JSON.stringify(selectedFlight));
+    localStorage.setItem('selectedFlightId', selectedFlight.id || 'unknown');
+  
+    closeModal();
+    navigate('/reserver', { state: selectedFlight });
+  };
+  
+  
+  if (loading) return <p className="text-center">Chargement des vols...</p>;
+  if (error) return <p className="text-red-500 text-center">{error}</p>;
+
   return (
-    <section className="py-16 bg-gray-50">
-      <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-800 mb-4">Destinations populaires</h2>
-          <p className="text-gray-600 max-w-2xl mx-auto">
-            Découvrez nos destinations les plus populaires et laissez-vous inspirer pour votre prochain voyage.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {popularCities.map((city) => (
-            <div
-              key={city.id}
-              className="bg-white rounded-xl shadow-md overflow-hidden transition-transform duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer"
-            >
-              <div className="h-48 overflow-hidden">
-                <img
-                  src={`https://readdy.ai/api/search-image?query=Beautiful%20cityscape%20of%20${encodeURIComponent(
-                    city.name
-                  )}%2C%20${encodeURIComponent(
-                    city.country
-                  )}%20with%20iconic%20landmarks%20and%20architecture.%20The%20image%20has%20a%20clean%2C%20bright%20background%20with%20natural%20lighting%20that%20highlights%20the%20citys%20unique%20character.%20Professional%20travel%20photography%20style%20with%20vibrant%20colors%20and%20crisp%20details&width=400&height=200&seq=${
-                    city.id
-                  }&orientation=landscape`}
-                  alt={`${city.name}, ${city.country}`}
-                  className="w-full h-full object-cover object-top transition-transform duration-500 hover:scale-110"
-                />
-              </div>
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">{city.name}</h3>
-                <p
-                  className="text-gray-600 mb-4 hover:text-blue-600 cursor-pointer"
-                  onClick={() => onCountryClick(city.country)}
-                >
-                  {city.country}
-                </p>
-                <div className="flex justify-between items-center">
-                  <span className="text-blue-600 font-semibold">À partir de 299 €</span>
-                  <button className="text-blue-600 hover:text-blue-800 font-medium rounded-button cursor-pointer whitespace-nowrap">
-                    Voir les offres <i className="fas fa-arrow-right ml-1"></i>
-                  </button>
-                </div>
-              </div>
+    <div className="px-4 py-6"> 
+      <h2 className="text-2xl font-bold text-center mb-6">Les vols les plus populaires</h2>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+        {flights.map((flight) => (
+          <div key={flight.id} className="bg-white rounded-xl shadow-md p-4">
+            <img
+              src="https://images.unsplash.com/photo-1502602898657-3e91760cbb34"
+              alt="Avion"
+              className="w-full h-40 object-cover rounded-md mb-3"
+            />
+            <div className="text-3xl mb-2">
             </div>
-          ))}
-        </div>
+            <div className="font-semibold text-gray-800">{flight.airline}</div>
+            <div className="text-sm text-gray-600 mb-1">
+              {flight.departure} → {flight.arrival}
+            </div>
+            <div className="text-lg font-bold text-blue-600 text-end">
+              {flight.price} {flight.currency}
+            </div>
+            <button
+              onClick={() => handleBookClick(flight)}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+            >
+              Réserver maintenant
+            </button>
+          </div>
+        ))}
       </div>
-    </section>
+
+      {/* MODALE DE CONFIRMATION */}
+      {showModal && selectedFlight && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white rounded-xl shadow-lg p-6 w-[90%] max-w-md">
+            <h3 className="text-xl font-semibold mb-4 text-center">Confirmation de réservation</h3>
+
+            <p className="text-gray-700 mb-2 ">
+              Voulez-vous réserver ce vol avec <b>{selectedFlight.airline}</b> ?
+            </p>
+            <p className="mb-4 ">
+              {selectedFlight.departure} → {selectedFlight.arrival} <br />
+              <span className="font-bold">{selectedFlight.price} {selectedFlight.currency}</span>
+            </p>
+            <div className="flex justify-between">
+              <button
+                onClick={closeModal}
+                className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
+              >
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
