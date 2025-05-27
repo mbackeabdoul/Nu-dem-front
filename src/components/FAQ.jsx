@@ -7,7 +7,7 @@ const FAQ = () => {
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold text-gray-800 mb-4">Questions fréquentes</h2>
           <p className="text-gray-600 max-w-2xl mx-auto">
-            Trouvez des réponses aux questions les plus courantes sur notre service.
+            Trouvez des réponses aux questions les plus courantes sur notre service de réservation de vols.
           </p>
         </div>
         <div className="max-w-3xl mx-auto">
@@ -16,7 +16,7 @@ const FAQ = () => {
               Comment fonctionne la réservation de vols ?
             </h3>
             <p className="text-gray-600">
-              Notre système vous permet de rechercher des vols, de sélectionner celui qui vous convient et de remplir un formulaire avec vos informations personnelles pour finaliser la réservation.
+              Recherchez des vols en entrant votre ville de départ, votre destination et vos dates. Sélectionnez un vol, remplissez vos informations personnelles dans le formulaire de réservation, et finalisez votre achat. Vous devrez être connecté pour réserver.
             </p>
           </div>
           <div className="mb-6 bg-white rounded-xl shadow-sm p-6">
@@ -24,7 +24,7 @@ const FAQ = () => {
               Où sont stockées mes réservations ?
             </h3>
             <p className="text-gray-600">
-              Vos réservations sont stockées localement dans votre navigateur (localStorage). Cela signifie qu'elles ne sont disponibles que sur l'appareil que vous utilisez.
+              Vos réservations sont enregistrées de manière sécurisée dans notre base de données après la confirmation de votre paiement. Vous pouvez y accéder via la section "Mes Réservations" une fois connecté.
             </p>
           </div>
           <div className="mb-6 bg-white rounded-xl shadow-sm p-6">
@@ -32,7 +32,7 @@ const FAQ = () => {
               Puis-je annuler une réservation ?
             </h3>
             <p className="text-gray-600">
-              Oui, vous pouvez annuler une réservation à tout moment depuis la section "Mes Réservations". La réservation sera alors supprimée de votre historique.
+              Oui, connectez-vous à votre compte, allez dans "Mes Réservations", et annulez une réservation à tout moment. Notez que les politiques d'annulation peuvent dépendre de la compagnie aérienne.
             </p>
           </div>
           <div className="bg-white rounded-xl shadow-sm p-6">
@@ -40,7 +40,7 @@ const FAQ = () => {
               Est-ce que je reçois un email de confirmation ?
             </h3>
             <p className="text-gray-600">
-              Pour l'instant, notre application est une démo et n'a pas de système d'envoi d'emails. Vos réservations sont uniquement accessibles via l'interface web.
+              Oui, après avoir finalisé votre réservation, vous recevrez un email de confirmation avec les détails de votre vol. Un billet électronique vous sera également envoyé par email une fois le paiement validé.
             </p>
           </div>
         </div>
