@@ -12,20 +12,30 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (token) {
-      // Optionnel : Vérifier le token avec une requête API
-      setAuth({ isAuthenticated: true, user: null, token });
+    const storedUser = localStorage.getItem('user');
+    if (token && storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setAuth({ isAuthenticated: true, user, token });
+      } catch (err) {
+        console.error('Erreur lors de la restauration de l’utilisateur:', err);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setAuth({ isAuthenticated: false, user: null, token: null });
+      }
     }
   }, []);
 
   const login = (user, token) => {
     setAuth({ isAuthenticated: true, user, token });
     localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user)); // Persister l'utilisateur
   };
 
   const logout = () => {
     setAuth({ isAuthenticated: false, user: null, token: null });
     localStorage.removeItem('token');
+    localStorage.removeItem('user'); // Supprimer l'utilisateur
     localStorage.removeItem('pendingFlight');
     localStorage.removeItem('selectedFlight');
     localStorage.removeItem('selectedFlightId');
