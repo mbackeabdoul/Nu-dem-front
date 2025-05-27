@@ -55,9 +55,17 @@ const App = () => {
     console.log('Recherche soumise:', data);
     setSearchForm(data);
     const query = new URLSearchParams({
+
+      
+      departureName: data.departureName,
+     
+      arrivalName: data.arrivalName,
+
       departure: data.departure,
       arrival: data.arrival,
       date: data.date,
+      tripType: data.tripType,
+      returnDate: data.returnDate ,
       passengers: data.passengers.toString(),
     }).toString();
     try {
