@@ -244,7 +244,7 @@ const BookingForm = ({ onSubmit }) => {
 
       console.log('Booking data sent to API:', bookingData);
 
-      const bookingRes = await fetch('http://localhost:5000/api/bookings', {
+      const bookingRes = await fetch('https://nu-dem-back.onrender.com/api/bookings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
