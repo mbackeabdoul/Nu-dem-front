@@ -23,7 +23,7 @@ const PopularDestinations = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const response = await axios.get('https://nu-dem-back.onrender.com/api/flights', {
+      const response = await axios.get('http://localhost:5000/api/flights', {
         params: {
           departure: flights?.departure || 'DSS',
           arrival: 'CDG',

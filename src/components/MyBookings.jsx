@@ -150,7 +150,7 @@ const MyBookings = ({ bookings, onCancel }) => {
                         <div>
                           <p className="text-sm text-gray-500">Prix</p>
                           <p className="font-semibold text-gray-900">
-                            {booking.price ? `${booking.price} €` : 'N/A'}
+                            {booking.price ? `${booking.price} XOF` : 'N/A'}
                           </p>
                         </div>
                       </div>

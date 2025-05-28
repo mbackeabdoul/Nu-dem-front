@@ -17,6 +17,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import { AuthContext } from './AuthContext.jsx';
 import MotDePasseOublier from './components/MotDePasseOublier.jsx';
 import ResetPassword from './components/ResetPassword.jsx';
+import Contact from './components/Contact'; // Ajoute cette importation
 
 const AppContent = ({
   auth, searchForm, setSearchForm, flights, handleSearchSubmit,
@@ -78,6 +79,7 @@ const AppContent = ({
             <MyBookings bookings={bookings} onCancel={handleCancelBooking} />
           }
         />
+        <Route path="/contact" element={<Contact />} /> {/* Ajoute cette route */}
       </Routes>
       {!hideHeaderFooter && <Footer />}
       {isModalOpen && selectedCountry && (
@@ -131,17 +133,13 @@ const App = () => {
   const handleSearchSubmit = async (data) => {
     setSearchForm(data);
     const query = new URLSearchParams({
-
-      
       departureName: data.departureName,
-     
       arrivalName: data.arrivalName,
-
       departure: data.departure,
       arrival: data.arrival,
       date: data.date,
       tripType: data.tripType,
-      returnDate: data.returnDate ,
+      returnDate: data.returnDate,
       passengers: data.passengers.toString(),
     }).toString();
 
