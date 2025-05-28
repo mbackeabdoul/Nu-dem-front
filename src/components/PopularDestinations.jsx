@@ -14,6 +14,22 @@ const PopularDestinations = () => {
   const authContext = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // Images de destinations variées
+  const destinationImages = [
+    'https://images.unsplash.com/photo-1431274172761-fca41d930114?w=400&h=250&fit=crop', // Paris
+    'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=400&h=250&fit=crop', // Londres
+    'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=400&h=250&fit=crop', // Tokyo
+    'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=400&h=250&fit=crop', // Dubai
+    'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=400&h=250&fit=crop', // Istanbul
+    'https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400&h=250&fit=crop', // Rome
+    'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=400&h=250&fit=crop', // New York
+    'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=400&h=250&fit=crop'  // Avion
+  ];
+
+  const getRandomImage = (index) => {
+    return destinationImages[index % destinationImages.length];
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     setIsAuthenticated(!!token);
@@ -23,7 +39,7 @@ const PopularDestinations = () => {
     try {
       const today = new Date().toISOString().split('T')[0];
 
-      const response = await axios.get('http://localhost:5000/api/flights', {
+      const response = await axios.get('https://nu-dem-back.onrender.com/api/flights', {
         params: {
           departure: flights?.departure || 'DSS',
           arrival: 'CDG',
@@ -70,23 +86,34 @@ const PopularDestinations = () => {
     navigate('/reserver', { state: selectedFlight });
   };
 
-  if (loading) return <p className="text-center">Chargement des vols...</p>;
+  if (loading) {
+    return (
+      <div className="px-4 py-8">
+        <div className="flex justify-center items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="ml-3 text-gray-600">Chargement des vols...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (error) return <p className="text-red-500 text-center">{error}</p>;
 
   return (
     <div className="px-4 py-8">
       <h2 className="text-2xl font-semibold text-center mb-8 text-gray-800 font-bold">Les vols les plus populaires</h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {flights.slice(0, 8).map((flight) => (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {flights.slice(0, 8).map((flight, index) => (
           <div
             key={flight.id}
-            className="bg-white rounded-lg border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-200"
+            className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow duration-300"
           >
             <img
-              src="https://images.unsplash.com/photo-1436491865332-7a61a109cc05"
+              src={getRandomImage(index)}
               alt="Destination"
               className="w-full h-36 object-cover"
+              loading="lazy"
             />
 
             <div className="p-4">
@@ -106,7 +133,7 @@ const PopularDestinations = () => {
                 </span>
                 <button
                   onClick={() => handleBookClick(flight)}
-                  className="text-white  p-2 font-medium text-sm bg-blue-600 font-bold transition-colors"
+                  className="text-white px-4 py-2 font-medium text-sm bg-blue-600 rounded hover:bg-blue-700 transition-colors"
                 >
                   Réserver →
                 </button>
