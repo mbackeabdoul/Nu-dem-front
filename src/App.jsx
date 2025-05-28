@@ -114,19 +114,20 @@ const App = () => {
   const [bookings, setBookings] = useState([]);
   const [flights, setFlights] = useState([]);
 
+  const fetchBookings = async () => {
+    try {
+      const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
+      const res = await fetch('https://nu-dem-back.onrender.com/api/bookings', { headers });
+      if (!res.ok) throw new Error('Erreur chargement réservations');
+      const data = await res.json();
+      setBookings(data);
+    } catch (err) {
+      console.error('Erreur chargement réservations:', err.message);
+      toast.error('Erreur chargement réservations');
+    }
+  };
+
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const headers = auth.token ? { Authorization: `Bearer ${auth.token}` } : {};
-        const res = await fetch('https://nu-dem-back.onrender.com/api/bookings', { headers });
-        if (!res.ok) throw new Error('Erreur chargement réservations');
-        const data = await res.json();
-        setBookings(data);
-      } catch (err) {
-        console.error('Erreur chargement réservations:', err.message);
-        toast.error('Erreur chargement réservations');
-      }
-    };
     if (auth.isAuthenticated) fetchBookings();
   }, [auth]);
 
@@ -178,8 +179,13 @@ const App = () => {
     }
   };
 
-  const handleBookingSubmit = async (booking) => {
-    setBookings([...bookings, booking]);
+  const handleBookingSubmit = async (newBooking) => {
+    // Ajoute la nouvelle réservation reçue de l'API
+    setBookings((prevBookings) => [...prevBookings, newBooking]);
+    // Recharge les données pour synchronisation (facultatif, selon la fiabilité de l'API)
+    if (auth.isAuthenticated) {
+      await fetchBookings();
+    }
   };
 
   const handleCancelBooking = async (id) => {

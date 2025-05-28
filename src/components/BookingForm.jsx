@@ -187,109 +187,86 @@ const BookingForm = ({ onSubmit }) => {
     }
   };
 
-  const submitHandler = async (data) => {
-    if (isSubmitting) return;
-    setIsSubmitting(true);
-    try {
-      setError('');
-      if (!auth.isAuthenticated && !localStorage.getItem('guest')) {
-        console.log('Utilisateur non connecté, affichage modal');
-        setShowAuthModal(true);
-        toast.error('Veuillez vous connecter ou continuer en tant qu\'invité.');
-        return;
-      }
-      if (!flightData || !data.departureDateTime) {
-        throw new Error('Données de vol incomplètes.');
-      }
-
-      // Préparer les dates d'arrivée
-      const arrivalDateTime = data.arrivalDateTime && data.arrivalDateTime !== 'Non spécifié'
-        ? new Date(data.arrivalDateTime).toISOString()
-        : null;
-
-      // Préparer les données de retour si aller-retour
-      const returnDepartureDateTime = data.returnDepartureDateTime
-        ? new Date(data.returnDepartureDateTime).toISOString()
-        : null;
-      
-      const returnArrivalDateTime = data.returnArrivalDateTime
-        ? new Date(data.returnArrivalDateTime).toISOString()
-        : null;
-
-      const bookingData = {
-        ...data,
-        userId: auth.isAuthenticated ? auth.user?._id || null : null,
-        ticketNumber: `TKT-${Date.now()}`,
-        paymentStatus: 'pending',
-        
-        // Données aller
-        departureDateTime: data.departureDateTime,
-        arrivalDateTime: arrivalDateTime,
-        duration: data.duration,
-        
-        // Données retour (pour aller-retour)
-        returnDepartureDateTime: returnDepartureDateTime,
-        returnArrivalDateTime: returnArrivalDateTime,
-        returnDuration: data.returnDuration || null,
-        
-        seat: data.seat,
-        checkInTime: data.checkInTime,
-        remainingSeats: data.remainingSeats,
-        isRoundTrip: data.isRoundTrip || false,
-        
-        // Segments détaillés
-        segments: flightData.segments || [],
-        returnSegments: flightData.returnSegments || [],
-      };
-
-      console.log('Booking data sent to API:', bookingData);
-
-      const bookingRes = await fetch('https://nu-dem-back.onrender.com/api/bookings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(auth.token && { Authorization: `Bearer ${auth.token}` }),
-        },
-        body: JSON.stringify(bookingData),
-      });
-
-      const bookingResponse = await bookingRes.json();
-      if (!bookingRes.ok) {
-        throw new Error(bookingResponse.error || 'Erreur lors de la création de la réservation');
-      }
-
-      // const paymentRes = await fetch('http://localhost:5000/api/payments', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ bookingId: bookingResponse._id, paymentMethod: data.paymentMethod }),
-      // });
-
-      // const paymentData = await paymentRes.json();
-      // if (!paymentRes.ok) {
-      //   throw new Error(paymentData.error || 'Erreur lors du paiement');
-      // }
-
-      // if (paymentData.success) {
-      //   await onSubmit(bookingResponse);
-      //   localStorage.removeItem('selectedFlight');
-      //   localStorage.removeItem('selectedFlightId');
-      //   localStorage.removeItem('guest');
-      //   toast.success('Paiement réussi ! Réservation confirmée. Vérifiez votre boîte de réception (ou spams) pour télécharger votre billet.');
-      //   navigate('/mes-reservations');
-      // } else {
-      //   setError('Le paiement a échoué. Veuillez réessayer.');
-      //   toast.error('Le paiement a échoué.');
-      // }
-      toast.success('Paiement réussi ! Réservation confirmée. Vérifiez votre boîte de réception (ou spams) pour télécharger votre billet.');
-
-    } catch (err) {
-      console.error('Error in booking or payment:', err);
-      setError(err.message || 'Une erreur est survenue.');
-      toast.error(err.message || 'Une erreur est survenue.');
-    } finally {
-      setIsSubmitting(false);
+const submitHandler = async (data) => {
+  if (isSubmitting) return;
+  setIsSubmitting(true);
+  try {
+    setError('');
+    if (!auth.isAuthenticated && !localStorage.getItem('guest')) {
+      console.log('Utilisateur non connecté');
+      setShowAuthModal(true);
+      setPendingFormData(data);
+      toast.error('Veuillez vous connecter ou continuer en tant qu\'invité.');
+      return;
     }
-  };
+    if (!flightData || !data.departureDateTime) {
+      throw new Error('Données de vol incomplètes.');
+    }
+
+    const arrivalDateTime = data.arrivalDateTime && data.arrivalDateTime !== 'Non spécifié'
+      ? new Date(data.arrivalDateTime).toISOString()
+      : null;
+
+    const returnDepartureDateTime = data.returnDepartureDateTime
+      ? new Date(data.returnDepartureDateTime).toISOString()
+      : null;
+    
+    const returnArrivalDateTime = data.returnDuration
+      ? new Date(data.returnArrivalDateTime).toISOString()
+      : null;
+
+    const bookingData = {
+      ...data,
+      userId: auth.isAuthenticated ? auth.user?._id : null,
+      ticketNumber: `TKT-${Date.now()}`,
+      paymentStatus: 'pending',
+      departureDateTime: data.departureDateTime,
+      arrivalDateTime,
+      duration: data.duration,
+      returnDepartureDateTime,
+      returnArrivalDateTime,
+      returnDuration: data.returnDuration || null,
+      seat: data.seat,
+      checkInTime: data.checkInTime,
+      remainingSeats: data.remainingSeats,
+      isRoundTrip: data.isRoundTrip || false,
+      segments: flightData.segments || [],
+      returnSegments: flightData.returnSegments || [],
+    };
+
+    console.log('Booking data sent to API:', bookingData);
+
+    const bookingRes = await fetch('https://nu-dem-back.onrender.com/api/bookings', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(auth.token && { Authorization: `Bearer ${auth.token}` }),
+      },
+      body: JSON.stringify(bookingData),
+    });
+
+    const bookingResponse = await bookingRes.json();
+    if (!bookingRes.ok) {
+      throw new Error(bookingResponse.error || 'Erreur lors de la création de la réservation');
+    }
+
+    // Passe la réponse complète de l'API à onSubmit
+    await onSubmit(bookingResponse);
+
+    toast.success('Paiement réussi ! Réservation confirmée. Vérifiez votre boîte de réception (ou spams) pour télécharger votre billet !');
+    navigate('/');
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
+
+  } catch (err) {
+    console.error('Error in booking or payment:', err);
+    setError(err.message || 'Une erreur est survenue.');
+    toast.error(err.message || 'Une erreur est survenue.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   if (!isFormReady || !flightData) {
     return (
